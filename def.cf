@@ -21,7 +21,7 @@ bundle common def
 
       # List here the IP masks that we grant access to on the server
 
-      "acl"     slist => {
+      "acl_net"     slist => {
 
                            # Assume /16 LAN clients to start with
                            "$(sys.policy_hub)/16",
