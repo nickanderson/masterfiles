@@ -152,6 +152,15 @@ bundle common def
         "$(sys.workdir)/reports",
       };
 
+    # ha_enabled is defined in WORKDIR/ha/ha_def.cf
+    # Disabled by default
+
+    ha_enabled::
+      "policy_servers" slist => {"$(sys.policy_hub)", @(ha_def.ips)};
+
+    !ha_enabled::
+      "policy_servers" slist => {"$(sys.policy_hub)"};
+
   classes:
 
       ### Enable special features policies. Set to "any" to enable.

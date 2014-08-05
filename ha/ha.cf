@@ -1,0 +1,16 @@
+bundle agent ha_main
+{
+ vars:
+  ha_enabled::
+   "policy_servers" slist => {@(ha_def.policy_servers)};
+   "sha" slist => getvalues("ha_def.config[$(ip)][sha]");
+
+ reports:
+  ha_enabled::
+   "IPs: $(policy_servers)";
+   "sha local = $(sha)";
+#   "sha config : $(ha_def.config[$(ips)][sha])";
+
+   "ip ha: $(ha_def.ips)";
+}
+
