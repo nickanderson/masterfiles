@@ -6,8 +6,7 @@ bundle common ha_def
 
  vars:
   ha_enabled::
-  # "config_file" string => "$(sys.inputdir)/ha/ha_info.json";
-   "config_file" string => "/root/masterfiles/ha/ha_info.json";
+   "config_file" string => "$(sys.inputdir)/ha/ha_info.json";
    "ppkeys_staging" string => "$(sys.workdir)/ppkeys_staging";
 
    "config" data => readjson("$(config_file)", "4k");

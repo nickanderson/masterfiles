@@ -95,24 +95,37 @@ bundle server access_rules()
       "$(def.cf_runagent_shell)"
       handle => "server_access_grant_access_shell_cmd",
       comment => "Grant access to shell for cfruncommand",
-      admit => { @(ha_def.policy_servers) };
+      admit => { @(def.policy_servers) };
 
-    policy_server.enterprise::
+    policy_server.ha_enabled::
+      "$(sys.workdir)/ppkeys"
+      handle => "server_access_grant_access_ppkeys_hubs",
+      comment => "Grant access to ppkeys for HA hubs",
+      admit => { @(def.policy_servers) };
+
+      "$(sys.workdir)/policy_server.dat"
+      handle => "server_access_grant_access_policy_server_dat",
+      comment => "Grant access tp policy_server.dat",
+      admit => { @(def.acl) };
+
+      "$(sys.workdir)/ppkeys_staging/root-SHA=$(ha_def.config[$(def.policy_servers)][sha]).pub"
+      handle => "server_access_grant_access_to_clients",
+      comment => "Grant access to hubs' keys to clients",
+      admit => { @(def.acl) };
 
     windows::
       "c:\program files\cfengine\bin\cf-agent.exe"
       handle => "server_access_grant_access_agent",
       comment => "Grant access to the agent (for cf-runagent)",
-      admit   => { @(ha_def.policy_servers) };
+      admit   => { @(def.policy_servers) };
 
     !policy_server.enterprise::
-
       "$(query_types)"
       handle => "server_access_grant_$(query_types)_for_hosts",
       comment => "Grant $(query_types) reporting query for the hub on the hosts",
       resource_type => "query",
       report_data_select => default_data_select_host,
-      admit => { @(ha_def.policy_servers) };
+      admit => { @(def.policy_servers) };
 
     policy_server.enterprise::
 
@@ -121,7 +134,7 @@ bundle server access_rules()
       comment => "Grant $(query_types) reporting query for the hub on the policy server",
       resource_type => "query",
       report_data_select => default_data_select_policy_hub,
-      admit => { @(ha_def.policy_servers) };
+      admit => { @(def.policy_servers) };
 
   roles:
 

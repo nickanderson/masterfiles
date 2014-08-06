@@ -1,17 +1,20 @@
 {
- "172.17.0.4":
+ "172.17.0.5":
  {
-  "sha": "bcd42c2cbcc9a2b71451ad1e225f676002a03c03a15d3c6a10403a5c08ea861f",
-  "priority": "1",
+  "sha": "a1072f944ec7f1c4c78f0dda6f858845991adc08dbe500e80f082e152eb886ee",
   "internal_ip": "172.17.0.4",
   "tags": ["server1"]
  },
- "172.17.0.5":
+ "172.17.0.2":
  {
-  "sha": "c41230db917ff360bef6fd2b4aa2ab27777dd00f04b82b423fce334098211f53",
-  "priority": "1",
-  "internal_ip": "172.17.0.5",
+  "sha": "c6bd68a37c6850b816ebcc5676f4e8389c5966eada0e25e58b68dba2ec126e52",
+  "internal_ip": "172.17.0.2",
   "tags": ["server2"]
  }
-
+ "172.17.0.6":
+ {
+  "sha": "de56d3147b9ce610cea56fb2157dc1abde4c24996c73cfc89ddcf64d140d6556",
+  "internal_ip": "172.17.0.6",
+  "tags": ["server3"]
+ }
 }

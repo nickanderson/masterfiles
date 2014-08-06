@@ -2,15 +2,87 @@ bundle agent ha_main
 {
  vars:
   ha_enabled::
-   "policy_servers" slist => {@(ha_def.policy_servers)};
+   "policy_servers" slist => { @(ha_def.ips) };
+   "connected_servers" slist => filter("$(sys.policy_hub)", policy_servers, false, true, 10);
    "sha" slist => getvalues("ha_def.config[$(ip)][sha]");
+
+ classes:
+   ha_enabled::
+   "ha_master_valid" expression => isvariable("sys.policy_hub"); # TODO: sys.hub_master
+
+ methods:
+  policy_server.ha_enabled.ha_master_valid::
+    "1. Write new master IP on hub" usebundle => update_master_ip_server;
+  
+  policy_server.ha_enabled::
+  "copy_hub_keys" usebundle => ha_hub_sync_keys;
+
+  keys_staged::
+   "establish trust" usebundle => ha_update_staged_ppkeys;
 
  reports:
   ha_enabled::
    "IPs: $(policy_servers)";
-   "sha local = $(sha)";
 #   "sha config : $(ha_def.config[$(ips)][sha])";
 
    "ip ha: $(ha_def.ips)";
+}
+
+bundle agent update_master_ip_server
+{
+ files:
+ policy_server::
+  "$(sys.workdir)/policy_server.dat"
+       comment => "Write current replica master to policy_server.dat",
+        handle => "write_replica_master",
+        create => "true",
+#     edit_line => insert_lines("$(sys.hub_master)"),
+      edit_line => insert_lines("$(sys.policy_hub)"), # replace by hub_master
+       classes => if_repaired("repl_set_fail_over"),
+ edit_defaults => empty;
+}
+
+bundle agent ha_hub_sync_keys
+{
+ files:
+   "$(ha_def.ppkeys_staging)"
+      copy_from => no_backup_scp("$(sys.workdir)/ppkeys", "$(ha_main.connected_servers)"),
+    file_select => client_keys_select,
+        comment => "Distribute all client keys between replica set servers",
+         handle => "ha_copy_client_keys_between_replica_set_servers",
+   depth_search => recurse("1"),
+        classes => if_repaired("keys_staged");
+
+ reports:
+    "HA main: $(ha_main.policy_servers)";
+}
+
+bundle agent ha_update_staged_ppkeys
+{
+ files:
+   "$(sys.workdir)/ppkeys"
+      copy_from => no_backup_cp("$(ha_main.ppkeys_staging)"),
+    file_select => client_keys_select,
+        comment => "Copy staged client keys to ppkeys",
+         handle => "ha_copy_staged_client_keys",
+   depth_search => recurse("1"),
+        classes => if_repaired("ppkeys_updated");
+}
+
+body file_select client_keys_select
+{
+ search_size => irange("426", "426");
+ leaf_name => {escape("root-$(sys.key_digest).pub"), "localhost.*"};
+ file_result => "size.!leaf_name";
+}
+
+body copy_from no_backup_scp(from,server)
+{
+servers     => { "$(server)" };
+source      => "$(from)";
+compare     => "digest";
+#copy_backup => "false";
+encrypt     => "true";
+trustkey    => "true";
 }
 
