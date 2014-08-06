@@ -128,7 +128,6 @@ bundle server access_rules()
       admit => { @(def.policy_servers) };
 
     policy_server.enterprise::
-
       "$(query_types)"
       handle => "server_access_grant_$(query_types)_for_hub",
       comment => "Grant $(query_types) reporting query for the hub on the policy server",

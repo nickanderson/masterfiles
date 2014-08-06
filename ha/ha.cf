@@ -4,7 +4,7 @@ bundle agent ha_main
   ha_enabled::
    "policy_servers" slist => { @(ha_def.ips) };
    "connected_servers" slist => filter("$(sys.policy_hub)", policy_servers, false, true, 10);
-   "sha" slist => getvalues("ha_def.config[$(ip)][sha]");
+#   "sha" slist => { @(ha_def.config[$(def.policy_servers)][sha])};
 
  classes:
    ha_enabled::
@@ -17,13 +17,16 @@ bundle agent ha_main
   policy_server.ha_enabled::
   "copy_hub_keys" usebundle => ha_hub_sync_keys;
 
-  keys_staged::
+  policy_server.keys_staged::
    "establish trust" usebundle => ha_update_staged_ppkeys;
+
+  !policy_server.ha_enabled::
+    "Copy hub keys to clients" usebundle => ha_node_sync_hub_keys;
 
  reports:
   ha_enabled::
    "IPs: $(policy_servers)";
-#   "sha config : $(ha_def.config[$(ips)][sha])";
+   "sha config : $(root-SHA=$(ha_def.config[$(def.policy_servers)][sha]).pub)";
 
    "ip ha: $(ha_def.ips)";
 }
@@ -46,7 +49,7 @@ bundle agent ha_hub_sync_keys
 {
  files:
    "$(ha_def.ppkeys_staging)"
-      copy_from => no_backup_scp("$(sys.workdir)/ppkeys", "$(ha_main.connected_servers)"),
+      copy_from => no_backup_scp("$(sys.workdir)/ppkeys", @(ha_main.connected_servers)),
     file_select => client_keys_select,
         comment => "Distribute all client keys between replica set servers",
          handle => "ha_copy_client_keys_between_replica_set_servers",
@@ -67,6 +70,18 @@ bundle agent ha_update_staged_ppkeys
          handle => "ha_copy_staged_client_keys",
    depth_search => recurse("1"),
         classes => if_repaired("ppkeys_updated");
+}
+
+bundle agent ha_node_sync_hub_keys
+{
+  files:
+  !policy_server::
+  "$(sys.workdir)/ppkeys/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub"
+      copy_from => no_backup_scp("$(sys.workdir)/ppkeys_staging/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub", @(def.policy_servers)),
+    file_select => client_keys_select,
+        comment => "Distribute all hub keys to clients",
+         handle => "ha_copy_hub_keys_to_nodes",
+        classes => if_repaired("keys_copied_clients");
 }
 
 body file_select client_keys_select
