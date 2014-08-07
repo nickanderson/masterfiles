@@ -2,7 +2,7 @@ bundle common ha_def
 {
  classes:
    any::
-   "ha_enabled" expression => "enterprise";
+   "ha_enabled" expression => "!any";
 
  vars:
   ha_enabled::
