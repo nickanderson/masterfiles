@@ -22,13 +22,6 @@ bundle agent ha_main
 
   !policy_server.ha_enabled::
     "Copy hub keys to clients" usebundle => ha_node_sync_hub_keys;
-
- reports:
-  ha_enabled::
-   "IPs: $(policy_servers)";
-   "sha config : $(root-SHA=$(ha_def.config[$(def.policy_servers)][sha]).pub)";
-
-   "ip ha: $(ha_def.ips)";
 }
 
 bundle agent update_master_ip_server
@@ -55,16 +48,13 @@ bundle agent ha_hub_sync_keys
          handle => "ha_copy_client_keys_between_replica_set_servers",
    depth_search => recurse("1"),
         classes => if_repaired("keys_staged");
-
- reports:
-    "HA main: $(ha_main.policy_servers)";
 }
 
 bundle agent ha_update_staged_ppkeys
 {
  files:
    "$(sys.workdir)/ppkeys"
-      copy_from => no_backup_cp("$(ha_main.ppkeys_staging)"),
+      copy_from => no_backup_cp("$(ha_def.ppkeys_staging)"),
     file_select => client_keys_select,
         comment => "Copy staged client keys to ppkeys",
          handle => "ha_copy_staged_client_keys",
@@ -77,7 +67,7 @@ bundle agent ha_node_sync_hub_keys
   files:
   !policy_server::
   "$(sys.workdir)/ppkeys/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub"
-      copy_from => no_backup_scp("$(sys.workdir)/ppkeys_staging/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub", @(def.policy_servers)),
+      copy_from => no_backup_scp("$(ha_def.ppkeys_staging)/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub", @(def.policy_servers)),
     file_select => client_keys_select,
         comment => "Distribute all hub keys to clients",
          handle => "ha_copy_hub_keys_to_nodes",
