@@ -79,7 +79,7 @@ dnl ######################################################################
 
 AC_MSG_NOTICE([generating install targets])
 MASTERFILES_INSTALL_TARGETS=
-for i in cfe_internal controls inventory lib services sketches/meta update; do
+for i in cfe_internal controls inventory lib services sketches/meta ha update; do
     MASTERFILES_INSTALL_TARGETS="$MASTERFILES_INSTALL_TARGETS $(find "$srcdir/$i" -name '*.cf' -exec printf '%s ' '{}' ';')"
 done
 for i in templates; do
