@@ -11,10 +11,4 @@
   "internal_ip": "172.17.0.2",
   "tags": ["server2"]
  }
- "172.17.0.6":
- {
-  "sha": "de56d3147b9ce610cea56fb2157dc1abde4c24996c73cfc89ddcf64d140d6556",
-  "internal_ip": "172.17.0.6",
-  "tags": ["server3"]
- }
 }

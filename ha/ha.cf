@@ -8,7 +8,7 @@ bundle agent ha_main
 
  classes:
    ha_enabled::
-   "ha_master_valid" expression => isvariable("sys.policy_hub"); # TODO: sys.hub_master
+   "ha_master_valid" expression => isvariable("sys.hub_active_ip"); # TODO: sys.hub_master
 
  methods:
   policy_server.ha_enabled.ha_master_valid::
@@ -33,7 +33,7 @@ bundle agent update_master_ip_server
         handle => "write_replica_master",
         create => "true",
 #     edit_line => insert_lines("$(sys.hub_master)"),
-      edit_line => insert_lines("$(sys.policy_hub)"), # replace by hub_master
+      edit_line => insert_lines("$(sys.hub_active_ip)"), # replace by hub_master
        classes => if_repaired("repl_set_fail_over"),
  edit_defaults => empty;
 }
