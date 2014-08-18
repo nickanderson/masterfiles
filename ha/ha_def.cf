@@ -9,6 +9,7 @@ bundle common ha_def
   ha_enabled::
    "config_file" string => "$(sys.inputdir)/ha/ha_info.json";
    "ppkeys_staging" string => "$(sys.workdir)/ppkeys_staging";
+   "ppkeys_hubs" string => "$(sys.workdir)/ppkeys_hubs";
 
    "config" data => readjson("$(config_file)", "4k");
    "ips" slist => getindices("config");

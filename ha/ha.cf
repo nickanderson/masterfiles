@@ -8,46 +8,55 @@ bundle agent ha_main
 
  classes:
    ha_enabled::
-   "ha_master_valid" expression => isvariable("sys.hub_active_ip"); # TODO: sys.hub_master
+    "ha_master_valid" expression => isvariable("sys.hub_active_ip");
 
  methods:
-  policy_server.ha_enabled.ha_master_valid::
-    "1. Write new master IP on hub" usebundle => update_master_ip_server;
-  
   policy_server.ha_enabled::
-  "copy_hub_keys" usebundle => ha_hub_sync_keys;
+    "sync_client_keys" usebundle => ha_hub_sync_clients_keys;
+    "copy_hubs_keys" usebundle => ha_hub_copy_hubs_keys;
 
   policy_server.keys_staged::
-   "establish trust" usebundle => ha_update_staged_ppkeys;
+    "establish trust" usebundle => ha_update_staged_ppkeys;
 
   !policy_server.ha_enabled::
     "Copy hub keys to clients" usebundle => ha_node_sync_hub_keys;
+    "Write new master IP on hub" usebundle => update_master_ip_server;
 }
+
+
+bundle agent ha_hub_copy_hubs_keys
+{
+ files:
+   "$(ha_def.ppkeys_hubs)"
+      copy_from => no_backup_cp("$(sys.workdir)/ppkeys"),
+      file_select => hubs_keys_select,
+      comment => "Copy all hubs keys to directory accessible by clients",
+      handle => "ha_copy_hubs_keys",
+      depth_search => recurse("1"),
+      classes => if_repaired("hubs_keys_staged");
+}
+
 
 bundle agent update_master_ip_server
 {
  files:
  policy_server::
   "$(sys.workdir)/policy_server.dat"
-       comment => "Write current replica master to policy_server.dat",
-        handle => "write_replica_master",
-        create => "true",
-#     edit_line => insert_lines("$(sys.hub_master)"),
-      edit_line => insert_lines("$(sys.hub_active_ip)"), # replace by hub_master
-       classes => if_repaired("repl_set_fail_over"),
- edit_defaults => empty;
+     copy_from => u_rcp("$(sys.workdir)/state/master_hub.dat", @(def.policy_servers)),
+     comment => "Update master hub IP on CFEngine node",
+     handle => "ha_cfengine_node_update_master";
 }
 
-bundle agent ha_hub_sync_keys
+bundle agent ha_hub_sync_clients_keys
 {
  files:
    "$(ha_def.ppkeys_staging)"
       copy_from => no_backup_scp("$(sys.workdir)/ppkeys", @(ha_main.connected_servers)),
-    file_select => client_keys_select,
-        comment => "Distribute all client keys between replica set servers",
-         handle => "ha_copy_client_keys_between_replica_set_servers",
-   depth_search => recurse("1"),
-        classes => if_repaired("keys_staged");
+      file_select => client_keys_select,
+      comment => "Distribute all client keys between replica set servers",
+      handle => "ha_copy_client_keys_between_replica_set_servers",
+      depth_search => recurse("1"),
+      classes => if_repaired("keys_staged");
 }
 
 bundle agent ha_update_staged_ppkeys
@@ -55,31 +64,39 @@ bundle agent ha_update_staged_ppkeys
  files:
    "$(sys.workdir)/ppkeys"
       copy_from => no_backup_cp("$(ha_def.ppkeys_staging)"),
-    file_select => client_keys_select,
-        comment => "Copy staged client keys to ppkeys",
-         handle => "ha_copy_staged_client_keys",
-   depth_search => recurse("1"),
-        classes => if_repaired("ppkeys_updated");
+      file_select => client_keys_select,
+      comment => "Copy staged client keys to ppkeys",
+      handle => "ha_copy_staged_client_keys",
+      depth_search => recurse("1"),
+      classes => if_repaired("ppkeys_updated");
 }
 
 bundle agent ha_node_sync_hub_keys
 {
   files:
-  !policy_server::
-  "$(sys.workdir)/ppkeys/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub"
-      copy_from => no_backup_scp("$(ha_def.ppkeys_staging)/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub", @(def.policy_servers)),
-    file_select => client_keys_select,
-        comment => "Distribute all hub keys to clients",
-         handle => "ha_copy_hub_keys_to_nodes",
-        classes => if_repaired("keys_copied_clients");
+   !policy_server::
+    "$(sys.workdir)/ppkeys/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub"
+      copy_from => no_backup_scp("$(ha_def.ppkeys_hubs)/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub", @(def.policy_servers)),
+      file_select => hubs_keys_select,
+      comment => "Distribute all hub keys to clients",
+      handle => "ha_copy_hub_keys_to_nodes",
+      classes => if_repaired("keys_copied_clients");
 }
 
 body file_select client_keys_select
 {
  search_size => irange("426", "426");
- leaf_name => {escape("root-$(sys.key_digest).pub"), "localhost.*"};
- file_result => "size.!leaf_name";
+ leaf_name => {"localhost.pub", escape("root-SHA=$(ha_def.config[$(ha_def.ips)][sha]).pub")};#, "root-SHA=eac058e252f7c6b1d57e63be68b97e7950bf85bf4067a46fb2b3b1031778baaf.pub"};
+ file_result => "!leaf_name";
 }
+
+body file_select hubs_keys_select
+{
+ search_size => irange("426", "426");
+ leaf_name => {escape("root-SHA=$(ha_def.config[$(ha_def.ips)][sha]).pub")};
+ file_result => "leaf_name";
+}
+
 
 body copy_from no_backup_scp(from,server)
 {
