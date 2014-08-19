@@ -103,12 +103,12 @@ bundle server access_rules()
       comment => "Grant access to ppkeys for HA hubs",
       admit => { @(def.policy_servers) };
 
-      "$(sys.workdir)/policy_server.dat"
+      "$(sys.workdir)/state/master_hub.dat"
       handle => "server_access_grant_access_policy_server_dat",
       comment => "Grant access tp policy_server.dat",
       admit => { @(def.acl) };
 
-      "$(sys.workdir)/ppkeys_staging/root-SHA=$(ha_def.config[$(def.policy_servers)][sha]).pub"
+      "$(sys.workdir)/ppkeys_hubs/root-SHA=$(ha_def.config[$(def.policy_servers)][sha]).pub"
       handle => "server_access_grant_access_to_clients",
       comment => "Grant access to hubs' keys to clients",
       admit => { @(def.acl) };
