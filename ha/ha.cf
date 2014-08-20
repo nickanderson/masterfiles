@@ -50,7 +50,7 @@ bundle agent update_master_ip_server
 bundle agent ha_hub_sync_clients_keys
 {
  vars:
-   "exclude_files" slist => {"localhost.priv", "localhost.pub",  escape("root-SHA=$(ha_def.config[$(sys.policy_hub)][sha]).pub") };
+   "exclude_files" slist => {"localhost.priv", "localhost.pub", escape("root-SHA=$(ha_def.config[$(sys.policy_hub)][sha]).pub"), escape("root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub") };
  files:
    "$(ha_def.ppkeys_staging)"
       copy_from => no_backup_scp("$(sys.workdir)/ppkeys", @(ha_main.connected_servers)),
@@ -95,7 +95,7 @@ body file_select client_keys_select
 body file_select hubs_keys_select
 {
  search_size => irange("426", "426");
- leaf_name => {escape("root-SHA=$(ha_def.config[$(ha_def.ips)][sha]).pub")};
+ leaf_name => {escape("root-SHA=$(ha_def.config[$(sys.policy_hub)][sha]).pub")};
  file_result => "leaf_name";
 }
 
