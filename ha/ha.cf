@@ -40,7 +40,7 @@ bundle agent ha_hub_copy_hubs_keys
 bundle agent update_master_ip_server
 {
  files:
- policy_server::
+ !policy_server::
   "$(sys.workdir)/policy_server.dat"
      copy_from => u_rcp("$(sys.workdir)/state/master_hub.dat", @(def.policy_servers)),
      comment => "Update master hub IP on CFEngine node",
@@ -66,7 +66,7 @@ bundle agent ha_update_staged_ppkeys
  files:
    "$(sys.workdir)/ppkeys"
       copy_from => no_backup_cp("$(ha_def.ppkeys_staging)"),
-      file_select => client_keys_select,
+      file_select => plain,
       comment => "Copy staged client keys to ppkeys",
       handle => "ha_copy_staged_client_keys",
       depth_search => recurse("1"),
@@ -77,12 +77,19 @@ bundle agent ha_node_sync_hub_keys
 {
   files:
    !policy_server::
-    "$(sys.workdir)/ppkeys/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub"
-      copy_from => no_backup_scp("$(ha_def.ppkeys_hubs)/root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub", @(def.policy_servers)),
-      file_select => hubs_keys_select,
+    "$(sys.workdir)/ppkeys"
+      copy_from => no_backup_scp("$(ha_def.ppkeys_hubs)", @(def.policy_servers)),
+      file_select => hub_all_keys,
+      depth_search => u_recurse("inf"),
       comment => "Distribute all hub keys to clients",
       handle => "ha_copy_hub_keys_to_nodes",
       classes => if_repaired("keys_copied_clients");
+}
+
+body file_select hub_all_keys
+{
+  leaf_name => {".*.pub"};
+  file_result => "leaf_name";
 }
 
 body file_select client_keys_select
@@ -95,7 +102,7 @@ body file_select client_keys_select
 body file_select hubs_keys_select
 {
  search_size => irange("426", "426");
- leaf_name => {escape("root-SHA=$(ha_def.config[$(sys.policy_hub)][sha]).pub")};
+ leaf_name => {escape("root-SHA=$(ha_def.config[$(ha_main.connected_servers)][sha]).pub")};
  file_result => "leaf_name";
 }
 

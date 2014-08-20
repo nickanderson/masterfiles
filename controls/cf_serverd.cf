@@ -108,7 +108,7 @@ bundle server access_rules()
       comment => "Grant access tp policy_server.dat",
       admit => { @(def.acl) };
 
-      "$(sys.workdir)/ppkeys_hubs/root-SHA=$(ha_def.config[$(def.policy_servers)][sha]).pub"
+      "$(sys.workdir)/ppkeys_hubs"
       handle => "server_access_grant_access_to_clients",
       comment => "Grant access to hubs' keys to clients",
       admit => { @(def.acl) };
