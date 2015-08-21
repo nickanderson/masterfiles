@@ -1,0 +1,7 @@
+body file_select hours_old(hours)
+# @brief Select files that have not been modified for at least `hours`
+# @param hours Number of hours
+{
+      mtime       => irange(0,ago(0, 0, 0, $(hours), 0, 0));
+      file_result => "mtime";
+}

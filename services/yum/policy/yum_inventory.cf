@@ -1,0 +1,30 @@
+bundle agent yum_inventory_file_control
+{
+  vars:
+      "input[yum_inventory_data_cache]"   string => "$(this.promise_dirname)/yum_inventory_data_cache.cf";
+      "input[yum_inventory_yum_info_yum]" string => "$(this.promise_dirname)/yum_inventory_yum_info_yum.cf";
+      "input[yum_inventory_yum_repolist]" string => "$(this.promise_dirname)/yum_inventory_yum_repolist.cf";
+
+      "inputs" slist => getvalues(input);
+}
+
+body file control
+{
+  inputs => { @(yum_inventory_file_control.inputs) };
+}
+
+bundle agent yum_inventory
+{
+  vars:
+      "state_dir" string => "$(sys.workdir)/state/yum_inventory";
+
+  methods:
+      "cache_yum_inventory"
+        usebundle => yum_inventory_data_cache;
+
+      "inventory_yum_info"
+        usebundle => yum_inventory_yum_info_yum;
+
+      "inventory_yum_repolist"
+        usebundle => yum_inventory_yum_repolist;
+}

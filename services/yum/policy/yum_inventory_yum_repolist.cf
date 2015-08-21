@@ -1,0 +1,65 @@
+bundle agent yum_inventory_yum_repolist
+{
+  meta:
+    "description"
+      string => "Inventory which repositories are enable and which repositories are disabled";
+
+    "classes"
+      slist => { "yum_repo_<repo_id>_enabled", "yum_repo_<repo_id>_disabled" };
+
+  vars:
+    have_yum_repolist_disabled_state_file::
+      "yum_repolist_disabled_output_data"
+        data => data_readstringarray( $(yum_inventory_data_cache.yum_repolist_disabled_state_file),
+                                      "Loaded plugins:|Loading mirror|repolist:|repo id",
+                                      "\s", 100, 1M ),
+        comment => "We probably won't have more than 100 repos or 1M of data";
+
+    # I end up with an extra empty element in the list, so until better
+    # parsing is figured out this needs to go through a temporary list and
+    # the empty elements need to be filtered.
+      "disabled_repoids_tmp" slist => getindices(yum_repolist_disabled_output_data);
+      "disabled_repoids" slist => filter("", disabled_repoids_tmp, false, true, 100);
+
+      "disabled_repo[$(disabled_repoids)]" -> { "Mission Portal", "CFEngine Enterprise" }
+        string => "$(disabled_repoids)",
+        meta => { "inventory", "attribute_name=Yum Disabled Repos" };
+
+    have_yum_repolist_enabled_state_file::
+      "yum_repolist_enabled_output_data"
+        data => data_readstringarray( $(yum_inventory_data_cache.yum_repolist_enabled_state_file),
+                                      "Loaded plugins:|Loading mirror|repolist:|repo id*[^\n]",
+                                      "\s", 100, 1M ),
+        comment => "We probably won't have more than 100 repos or 1M of data";
+
+    # I end up with an extra empty element in the list, so until better
+    # parsing is figured out this needs to go through a temporary list and
+    # the empty elements need to be filtered.
+      "enabled_repoids_tmp" slist => getindices(yum_repolist_enabled_output_data);
+      "enabled_repoids" slist => filter("", enabled_repoids_tmp, false, true, 100);
+
+      "enabled_repo[$(enabled_repoids)]" -> { "Mission Portal", "CFEngine Enterprise" }
+        string => "$(enabled_repoids)",
+        meta => { "inventory", "attribute_name=Yum Enabled Repos" };
+
+  classes:
+    # We make sure that we have the state files before we read them so that we do not generate errors
+      "have_yum_repolist_disabled_state_file"
+        expression => fileexists($(yum_inventory_data_cache.yum_repolist_disabled_state_file));
+
+      "have_yum_repolist_enabled_state_file"
+        expression => fileexists($(yum_inventory_data_cache.yum_repolist_enabled_state_file));
+
+      "yum_repo_$(enabled_repoids)_enabled"
+        expression => "any",
+        scope => "namespace";
+
+      "yum_repo_$(disabled_repoids)_disabled"
+        expression => "any",
+        scope => "namespace";
+
+  reports:
+    DEBUG|DEBUG_yum_inventory_yum_repolist::
+      "DEBUG $(this.bundle): '$(disabled_repoids)' disabled";
+      "DEBUG $(this.bundle): '$(enabled_repoids)' enabled";
+}

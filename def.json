@@ -1,7 +1,11 @@
 {
+    "inputs": [ "services/yum/def.cf" ],
+
     "classes":
     {
         "enable_phased_rollout": [ "any" ],
+	"enable_yum_inventory": [ "redhat", "centos" ],
 	"services_autorun" : [ "any" ]
     }
+
 }

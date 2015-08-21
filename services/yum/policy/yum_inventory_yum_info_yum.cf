@@ -1,0 +1,47 @@
+bundle agent yum_inventory_yum_info_yum
+{
+  meta:
+      "description"
+        string => "Inventory interesting information from yum info
+                   yum, currently just any yum plugins that are loaded";
+
+      "classes"
+        slist => { "yum_plugin_<plugin_name>_loaded" };
+
+  vars:
+    have_yum_info_output::
+      "yum_info_output"
+        string => readfile( $(yum_inventory_data_cache.yum_info_state_file), 1k );
+
+      "loaded_plugins"
+        slist => string_split( $(all_loaded_plugins[1]), ",\s?", 20),
+        comment => "Probably we won't have more than 20 yum plugins";
+
+      "count_loaded_plugins" int => length(loaded_plugins);
+
+      "plugin[$(loaded_plugins)]" -> { "Mission Portal", "CFEngine Enterprise" }
+        string => "$(loaded_plugins)",
+        meta => { "inventory", "attribute_name=Yum Plugins Loaded" };
+
+  classes:
+      "have_yum_info_output"
+        expression => fileexists( $(yum_inventory_data_cache.yum_info_state_file) );
+
+      "yum_plugin_$(loaded_plugins)_loaded"
+        expression => "any",
+        scope => "namespace",
+        comment => "Knowing which yum plugins are loaded could be useful in later policy";
+
+    have_yum_info_output::
+      "extracted_plugins_loaded"
+        expression => regextract( "Loaded plugins: ([^\n]*)", $(yum_info_output), all_loaded_plugins );
+
+  reports:
+    DEBUG|DEBUG_yum_inventory_yum_info::
+      "DEBUG $(this.bundle): found '$(yum_inventory_data_cache.yum_info_state_file)'"
+        ifvarclass => "have_yum_info_output";
+      "DEBUG $(this.bundle): found '$(count_loaded_plugins)' yum plugins loaded"
+        ifvarclass => "extracted_plugins_loaded";
+      "DEBUG $(this.bundle): found yum plugin '$(loaded_plugins)' loaded"
+        ifvarclass => "extracted_plugins_loaded";
+}

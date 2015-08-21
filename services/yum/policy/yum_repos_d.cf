@@ -1,0 +1,113 @@
+bundle agent yum_repos_d(extra_repo_files_state, data)
+#@brief Manage yum client configuration in /etc/yum.repos.d
+#@param extra_repo_files_state (purge|keep)
+#@param data The data to use to manage the yum repository definitions 
+#
+# Example Definition:
+# ```cf3
+# bundle agent example_yum_repos_definition
+# {
+#   vars:
+#       "rhel6_iso"
+#         meta => { "yum_repos_d" },
+#         data => parsejson('{
+#                   "RHEL6_ISO": {
+#                     "id": { "value": "RHEL6_ISO"},
+#                     "name": { "value": "RHEL6.$(os_ver2)_ISO"},
+#                     "baseurl": { "value": "http://myreposerver/repo/RHEL6.$(os_ver2)_$(sys.arch)"},
+#                     "gpgcheck": { "value": "1"},
+#                     "gpgkey": { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+#                   }
+#                 }');
+#
+#       # Find all of the repo definitions (variables in this bundle tagged with "yum_repos_d")
+#       "repo_defs" slist => variablesmatching("$(this.namespace):$(this.bundle)\..*", "yum_repos_d");
+#
+#       # Now we merge them all together into a single data var
+#       "data" data => parsejson('[]');
+#       "data" data => mergedata(data, $(repo_defs));
+# }
+# ```
+# Example Usage:
+# ```cf3
+# bundle agent main
+# {
+#   methods:
+#     "yum_repo_definitions"
+#       usebundle => example_yum_repos_definition;
+#
+#     # Note how the data is passed
+#     "yum_repos_d"
+#       usebundle => yum_repos_d("purge", @(example_yum_repos_definition.data));
+# }
+# ```
+# Files will be created in /etc/yum.repos.d/ named for the value of id.repo.
+{
+  meta:
+    "version" string => "2.0.2";
+
+  vars:
+    # The directory where repository definitions should be rendered (one file
+    # per definition).
+    "yum_repos_d" string => "/etc/yum.repos.d";
+
+    # Get a list of the defined repositories
+    "repo_ids" slist => getindices(data);
+
+    # Create one data container for each repository id (repository ids are
+    # expected to be valid class names, perhaps we sould canonify them)
+    "data_$(repo_ids)"
+      data => mergedata("data[$(repo_ids)]");
+
+    # Define the file name for each repo, and tag it so that we can get a
+    # consolidated list for later purging
+    "repo_file[$(repo_ids)]"
+      string => "$(data[$(repo_ids)][id][value]).repo";
+
+    "requested_repo_file_vars"
+      slist => variablesmatching("$(this.namespace):$(this.bundle)\.file_.*", "requested_repo_file");
+
+    # You must first define a list, before you are able to extend a list with itself.
+    "requested_repo_files" slist => { };
+    "requested_repo_files" slist => getvalues(repo_file);
+
+    # These variables are only useful when requesting DEBUG output
+    DEBUG|DEBUG_yum_repos_d::
+      "s_data_$(repo_ids)" string => format("%S", "data_$(repo_ids)");
+      "repo_ids_count" int => length("repo_ids");
+
+  classes:
+      "purge_extra_repo_files" expression => strcmp("purge", "$(extra_repo_files_state)");
+      "keep_extra_repo_files" expression => strcmp("keep", "$(extra_repo_files_state)");
+      "extra_repo_files_state_invalid_option"
+        expression => "!(purge_extra_repo_files|keep_extra_repo_files)";
+
+      "_have_var_data_$(repo_ids)[id][value]" expression => isvariable("data_$(repo_ids)[id][value]");
+
+  files:
+    "$(yum_repos_d)/$(data_$(repo_ids)[id][value]).repo"
+      create => "true",
+      edit_template => "$(this.promise_dirname)/../templates/yum.repo.mustache",
+      template_method => "mustache",
+      edit_defaults => empty,
+      perms => mog("0644", "root", "root"),
+      ifvarclass => canonify("_have_var_data_$(repo_ids)[id][value]"),
+      template_data => mergedata("data_$(repo_ids)");
+
+    purge_extra_repo_files::
+      "$(yum_repos_d)/.*.repo"
+        delete => tidy,
+        file_select => ex_list(@(requested_repo_files)),
+        comment => "Make sure that we have no extra .repo files here, we only
+                    want repos that we specify to exist.";
+
+  reports:
+    DEBUG|DEBUG_yum_repos_d::
+      "DEBUG $(this.bundle)";
+      "$(const.t) Total number of repo definitions (this bundle activation): '$(repo_ids_count)'";
+      "$(const.t) Should '$(extra_repo_files_state)' extra repo files in '$(yum_repos_d)'";
+      "$(const.t) requested_repo_file: '$(requested_repo_files)'";
+      "$(const.t) '$(repo_ids)' data: '$(s_data_$(repo_ids))'";
+      "$(const.t) Invalid option for 'extra_repo_files_state' valid options are 'purge' or 'keep'. Defaulting to 'keep'"
+        ifvarclass => "extra_repo_files_state_invalid_option";
+}

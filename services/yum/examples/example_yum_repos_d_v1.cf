@@ -1,0 +1,58 @@
+bundle agent example_usage
+{
+  methods:
+    production::
+      "converge_data" usebundle => yum_repos_d_data_bundle_pure_policy_example;
+      "repos" usebundle => yum_repos_d("purge", "yum_repos_d_data_bundle_pure_policy_example");
+    development::
+      "converge_data" usebundle => yum_repos_d_data_bundle_readjson_example;
+      "repos" usebundle => yum_repos_d("keep", " yum_repos_d_data_bundle_readjson_example");
+}
+
+# Example data interface bundles
+bundle agent yum_repos_d_data_bundle_pure_policy_example
+{
+  vars:
+    redhat_6::
+      "data[yum_repos_d][updates][name]" string => "CentOS Updates";
+      "data[yum_repos_d][updates][enable]" string => "1";
+      "data[yum_repos_d][updates][gpgcheck]" string => "0";
+      "data[yum_repos_d][updates][gpgkey]" string => "http://mirror.cisp.com/CentOS/6/os/i386/RPM-GPG-KEY-CentOS-6";
+      
+    redhat_6.site_datacenter_a::
+      "data[yum_repos_d][updates][baseurl]" string => "http://reposerver32.my.org/repo";
+      
+    redhat_6.site_datacenter_b::
+      "data[yum_repos_d][updates][baseurl]" string => "http://reposerver42.my.org/repo";
+}
+
+bundle agent yum_repos_d_data_bundle_parsejson_example
+{
+  vars:
+    "data" data => parsejson('
+{
+  "yum_repos_d" {
+
+  "updates": {
+    "name": "CentOS Updates",
+    "baseurl": "http://$(locations.rpm_repo)/repo",
+    "enable": "1",
+    "gpgcheck": "0",
+    "gpgkey": "http://mirror.cisp.com/CentOS/6/os/i386/RPM-GPG-KEY-CentOS-6"
+  }
+}
+}');
+}
+
+bundle agent yum_repos_d_data_bundle_readjson_example
+{
+  vars:
+    "data_file" string => "$(this.promise_diranme)../data/$(this.bundle).json";
+
+    "data" data => readjson( $(data_file), 1M );
+
+  classes:
+    "data_file_exists" expression => fileexists( $(data_file) );
+}
+
+

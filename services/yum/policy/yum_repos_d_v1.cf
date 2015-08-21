@@ -1,0 +1,143 @@
+# This implementation was deprecated due to performance issues
+# The new implementation does not support classic arrays and uses a mustache
+# template to render the client config files.
+bundle common yum_repos_d_file_control
+{
+  vars:
+    "input[lib]" string => "$(this.promise_dirname)/lib.cf";
+    "inputs" slist => getvalues(input);
+}
+
+body file control
+{
+  inputs => { @(yum_repos_d_file_control.inputs) };
+}
+
+bundle agent yum_repos_d(extra_repo_files_state, data_interface_bundle)
+#@brief Manage yum client configuration in /etc/yum.repos.d
+
+# This bundle looks in data_interface_bundle for a variable named 'data'. This
+# variable needs to be either a datacontainer or a classic cfengine array. It
+# expects to find a key named for itself 'yum_repos_d'and under that key a key
+# for each repository to be configured. This allows for very flexible data
+# construction, and other keys will be ignored. This bunlde will reconstruct
+# the data under its key locally into a classic array. This is done to support
+# expansion of cfengine variables within a data container.
+
+#@param extra_repo_files_state (purge|keep)
+#@param data_interface_bundle The bundle in which to look for 'data'
+{
+  meta:
+    "version" string => "1.0.0";
+
+  vars:
+    "yum_repos_d" string => "/etc/yum.repos.d";
+    # The data interface bundle could provide data that was read from json, or
+    # that is defined in a classic cfengine array. Json data does not
+    # dereference cfengine variables, so to support that use case we
+    # reconstruct a classic array here.
+
+    # First get a list of the repositories
+    "repo_ids" slist => getindices("$(data_interface_bundle).data[$(this.bundle)]");
+
+    "keys[$(repo_ids)]"
+      slist => getindices("$(data_interface_bundle).data[$(this.bundle)][$(repo_ids)]");
+
+    # Constructing this classic array becomes very expensive as the number of
+    # repsoitory definitions grows. The slow down becomes very noticeable at 5
+    # or 6 repository definitions.
+    "data[$(repo_ids)][$(keys[$(repo_ids)])]"
+      string => "$($(data_interface_bundle).data[$(this.bundle)][$(repo_ids)][$(keys[$(repo_ids)])])",
+      ifvarclass => "have_$(repo_ids)_$(keys[$(repo_ids)])";
+
+    "requested_repo_files" slist => maplist("$(this).repo", @(repo_ids));
+
+  classes:
+      "have_$(repo_ids)_$(keys[$(repo_ids)])"
+        expression => isvariable("$(data_interface_bundle).data[$(this.bundle)][$(repo_ids)][$(keys[$(repo_ids)])]");
+
+      "purge_extra_repo_files" expression => strcmp("purge", "$(extra_repo_files_state)");
+      "keep_extra_repo_files" expression => strcmp("keep", "$(extra_repo_files_state)");
+      "extra_repo_files_state_invalid_option"
+        expression => "!(purge_extra_repo_files|keep_extra_repo_files)";
+
+  files:
+      "$(yum_repos_d)/$(repo_ids).repo"
+        create => "true",
+        edit_line => manage_yum_sections("$(this.bundle).data", "$(repo_ids)"),
+        edit_defaults => empty;
+
+    purge_extra_repo_files::
+      "$(yum_repos_d)/.*.repo"
+        delete => tidy,
+        file_select => ex_list(@(requested_repo_files)),
+        comment => "Make sure that we have no extra .repo files here, we only
+                    want repos that we specify to exist.";
+
+  reports:
+    DEBUG|DEBUG_yum_repos_d::
+      "DEBUG $(this.bundle)";
+      "$(const.t)Extra repo files in '$(yum_repos_d)': '$(extra_repo_files_state)'";
+      "$(const.t)Invalid option for 'extra_repo_files_state' valid options are 'purge' or 'keep'. Defaulting to 'keep'"
+        ifvarclass => "extra_repo_files_state_invalid_option";
+      "$(const.t)repo: [$(repo_ids)] $(keys[$(repo_ids)])=$(data[$(repo_ids)][$(keys[$(repo_ids)])])";
+      "$(const.t)requested_repo_file: '$(requested_repo_files)'";
+}
+
+## Supporting Bundles and bodies
+## These were moved out of lib.cf as they are only of use to this policy, which
+## is deprecated.
+bundle edit_line manage_yum_sections(tab, sectionName)
+# @brief Manages a single file intended for use in /etc/yum/repos.d/file.repo
+
+# @param tab An associative array or data container containing `tab[sectionName][LHS]="RHS"`.
+# The value is not changed when the `RHS` is "dontchange"
+# @param sectionName The section in the file within which values should be
+# modified
+{
+  vars:
+      "index" slist => getindices("$(tab)[$(sectionName)]");
+
+      # Be careful if the index string contains funny chars
+      "cindex[$(index)]" string => canonify("$(index)");
+
+  classes:
+      "edit_$(cindex[$(index)])"
+        not => strcmp("$($(tab)[$(sectionName)][$(index)])","dontchange"),
+        comment => "Create conditions to make changes";
+
+      "have_$(sectionName)_$(index)"
+        expression => isvariable("$(tab)[$(sectionName)][$(index)]");
+
+  insert_lines:
+      "[$(sectionName)]"
+        location => start,
+        comment => "Insert lines";
+
+      "#END $(sectionName)" -> { "https://dev.cfengine.com/issues/2281" }
+        location => after("[$(sectionName)]"),
+        classes => scoped_classes_generic("bundle", "section_end"),
+        comment => "Due to bug 2281 we are unable to properly select regions, so
+                    we have to stuff in a fake ending section";
+
+    section_end_ok::
+      "$(index)=$($(tab)[$(sectionName)][$(index)])"
+        select_region => yum_repos_d_section("$(sectionName)"),
+        ifvarclass => "have_$(sectionName)_$(index)";
+
+  reports:
+    DEBUG|DEBUG_manage_yum_sections::
+    "DEBUG $(this.bundle)";
+    "$(const.t)$(tab)[$(sectionName)][$(index)] is a variable"
+      ifvarclass => "have_$(sectionName)_$(index)";
+}
+
+body select_region yum_repos_d_section(x)
+# @brief Restrict the `edit_line` promise to the lines in section `[x]`
+# @param x The name of the section in an INI-like configuration file
+{
+      select_start => "\[$(x)\]\s*";
+      select_end => "#END $(x)";
+}
+
+

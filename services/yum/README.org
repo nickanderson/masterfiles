@@ -1,0 +1,224 @@
+* yum
+** yum_repos_d
+Manage yum repository client configuration files residing in
+`/etc/yum.repos.d/*.repo`.
+
+- @param extra_repo_files_state Defines weather to keep or purge
+  unspecified repo files. (purge|keep) Defaults to keep.
+- @param data The data that defines the repositories
+
+Enabled by setting the class `enable_yum_repos_d`
+
+*** Example Usage
+#+begin_src cfengine
+  bundle agent main
+  {
+    methods:
+      # It's best practice to converge your data first
+      "yum_repository_definitions" usebundle => yum_repository_definitions;
+  
+      # Note how the data is passed
+      "repos" usebundle => yum_repos_d("purge", @(yum_repository_definitions.data));
+  }
+  
+  bundle agent yum_repository_definitions
+  # @brieg Define yum repository configurations
+  {
+  
+    vars:
+  
+        "os_ver"
+          string => string_head(
+                                execresult("/bin/rpm -q --queryformat '%{RELEASE}' redhat-release-server", "noshell"),
+                                "3"),
+          comment => "return the first three bytes of the OS version number, e.g.
+                      if the redhat-release-server package version is 6.5.0.1,
+                      return '6.5'.  Purpose: so that we can extract the minor
+                      version number, which we assume to be one digit.";
+  
+        "os_ver_2" string => string_tail("$(os_ver)", 1);
+  
+        "kickstart" string => ifelse("lab", "http://lab-kickstart", "http://default-kickstart");
+  
+      redhat_5.!oracle_5::
+        "RHEL5_iso"
+          meta => { "yum_repos_d" },
+          data => parsejson('{
+                    "RHEL5_ISO": {
+                      "id":       { "value": "RHEL5_ISO"},
+                      "name":     { "value": "RHEL5_ISO"},
+                      "baseurl":  { "value": "$(kickstart)/repo/RHEL$(os_ver)_$(sys.arch)"},
+                      "gpgcheck": { "value": "1"},
+                      "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                    }
+                  }');
+  
+      redhat_5|oracle_5::
+        "RHEL5_CUSTOM"
+          meta => { "yum_repos_d" },
+          data => parsejson('{
+                    "RHEL5_CUSTOM": {
+                      "id":       { "value": "RHEL5_CUSTOM"},
+                      "name":     { "value": "RHEL5_CUSTOM"},
+                      "baseurl":  { "value": "$(kickstart)/mrepo/rhel5s-$(sys.arch)/RPMS.custom"},
+                      "gpgcheck": { "value": "0"},
+                      "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                    }
+                  }');
+  
+      oracle_5::
+        "OEL5_ISO_SRV"
+          meta => { "yum_repos_d" },
+          data => parsejson('{
+                    "OEL5_ISO_SRV": {
+                      "id":       { "value": "OEL5_ISO_SRV"},
+                      "name":     { "value": "OEL5_ISO_SRV"},
+                      "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/Server"},
+                      "gpgcheck": { "value": "1"},
+                      "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                    }
+                  }');
+  
+      redhat_6|oracle_6::
+        "RHEL6_ISO"
+          meta => { "yum_repos_d" },
+          data => parsejson('{
+                    "RHEL6_ISO": {
+                      "id":       { "value": "RHEL6_ISO"},
+                      "name":     { "value": "RHEL6.$(os_ver2)_ISO"},
+                      "baseurl":  { "value": "$(kickstart)/repo/RHEL6.$(os_ver2)_$(sys.arch)"},
+                      "gpgcheck": { "value": "1"},
+                      "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                    }
+                  }');
+  
+      lab.redhat_6.!oracle_6::
+        "VMWARE_TOOL_OSP"
+          meta => { "yum_repos_d" },
+          data => parsejson('{
+                    "VMWARE_TOOL_OSP": {
+                      "id":       { "value": "VMWARE_TOOL_OSP"},
+                      "name":     { "value": "VMWARE_TOOL_OSP"},
+                      "baseurl":  { "value": "$(kickstart)/mrepo/vmware-tools-osp/esx5.1u2-6Server-$(sys.arch)"},
+                      "gpgcheck": { "value": "1"},
+                      "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                    }
+                  }');
+  
+      # It is important to return to the *any* class restriction so that we
+      # always try to consolidate the defined repos
+      any::
+        # Find all of the repo definitions (variables in this bundle tagged with "yum_repos_d")
+        "repo_defs" slist => variablesmatching("$(this.namespace):$(this.bundle)\..*", "yum_repos_d");
+  
+        # Now we merge them all together into a single data var
+        "data" data => parsejson('[]');
+        "data" data => mergedata(data, $(repo_defs));
+  
+       # These variables are only useful when debugging
+       DEBUG|DEBUG_yum_repository_definitions::
+         "s_data" string => format("%S", data);
+         "repo_ids" slist => getindices(data);
+         "repo_def_count" int => length(repo_ids);
+  
+     reports:
+       DEBUG|DEBUG_yum_repository_definitions::
+         "DEBUG $(this.bundle) YES THIS ONE";
+         "$(const.t) Found '$(repo_def_count)' yum repo client definitions";
+         "$(const.t) Found yum_repos_d client definition for '$(repo_ids)'";
+         "$(const.t) Serialized Data: '$(s_data)'";
+         "$(const.t) OS Version: '$(os_ver)'";
+         "$(const.t) OS Minor Version: '$(os_ver_2)'";
+  }
+#+end_src
+
+** yum_inventory
+Inventory information about yum
+
+All inventory information is cached. If you would like to invalidate the cache you may do so using the following classes:
+
+- yum_info_yum_cache_invalid
+- yum_repolist_disabled_cache_invalid
+- yum_repollist_enabled_cache_invalid
+
+Enabled by setting the class `enable_yum_inventory`
+
+Ensure the policy is activated
+
+#+begin_src cfengine
+  methods:
+    !redhat_4.(redhat|centos)::
+      "yum" usebundle => yum_inventory;
+#+end_src
+
+#+caption: Mission Portal Invetory Report Additional Attributes
+[[images/2015-01-30-Selection_001.jpg]]
+
+#+caption: Mission Portal Inventory Report Yum Plugins Loaded & Enabled Repositories
+[[images/2015-01-30-Selection_002.jpg]]
+
+[[images/2015-01-30-Selection_003.jpg]]
+
+*** yum_inventory_yum_info_yum
+Inventory interesting information about yum. Currently this includes
+the yum plugins (if any) which are loaded.
+
+Variables for enabled plugins are defined and tagged for use in
+CFEngine Enteprise Mission Portals Inventory interface. Classes are
+defined for each loaded plugin in the form
+`yum_plugin_<plugin_name>_loaded`.
+
+*** yum_inventory_yum_repolist
+Inventory interesting information about the yum repositories configured.
+
+Variables for each enabled and disabled repository are defined and
+tagged for use in CFEngine Enterprise Mission Poratls Inventory
+interface. Classes are defined for each configured repo in the form
+`yum_repo_<repo_id>_enabled` or `yum_repo_<repo_id>_disabled`.
+
+** How to integrate into your policy
+First get the policy into your masterfiles
+
+#+beign_src sh
+  cd /tmp
+  export MASTERFILES=/home/nickanderson/CFEngine/masterfiles
+  git clone https://github.com/nickanderson/yum.git
+  cd yum
+  mkdir -p $MASTERFILES/services/yum
+  git archive master | tar -x -C $MASTERFILES/services/yum
+#+end_src
+
+Include def.cf into your inputs
+
+#+begin_src cfengine
+  body common control
+  {
+        inputs => { 
+                    # Reports
+                    @(cfengine_reports.inputs),
+  
+                   "services/yum/def.cf",
+                    
+                    # autorun system
+                    @(services_autorun.inputs),
+        };
+  }
+#+end_src
+
+Ensure the features you want are enabled, (this should be done in a
+file that is included in inputs BEFORE the yum policy, for example
+def.cf) and that the policy will be activated. Note: if the feature is
+not enabled, it will not be included in inputs, and will be
+unavailable for use.
+
+#+begin_src cfengine
+  classes:
+    "enable_yum_inventory"
+      expression => "any",
+      comment => "Enable yum inventory reporting";
+
+    "enable_yum_repos_d"
+      expression => "any",
+      comment => "Enable policy to manage yum repository client configs
+                  in /etc/yum.repos.d";
+#+end_src

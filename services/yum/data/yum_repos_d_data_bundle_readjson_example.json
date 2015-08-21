@@ -1,0 +1,12 @@
+{
+  "yum_repos_d" {
+
+  "updates": {
+    "name": "CentOS Updates",
+    "baseurl": "http://$(locations.rpm_repo)/repo",
+    "enable": "1",
+    "gpgcheck": "0",
+    "gpgkey": "http://mirror.cisp.com/CentOS/6/os/i386/RPM-GPG-KEY-CentOS-6"
+  }
+}
+}

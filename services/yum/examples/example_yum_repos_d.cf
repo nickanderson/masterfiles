@@ -1,0 +1,277 @@
+# Example repository definition and activation for yum_repos_d policy.
+bundle agent main
+{
+  methods:
+    # It's best practice to converge your data first
+    "yum_repository_definitions" usebundle => yum_repository_definitions;
+
+    # Note how the data is passed
+    "repos" usebundle => yum_repos_d("purge", @(yum_repository_definitions.data));
+}
+
+bundle agent yum_repository_definitions
+# @brieg Define yum repository configurations
+{
+
+  vars:
+
+      "os_ver"
+        string => string_head(
+                              execresult("/bin/rpm -q --queryformat '%{RELEASE}' redhat-release-server", "noshell"),
+                              "3"),
+        comment => "return the first three bytes of the OS version number, e.g.
+                    if the redhat-release-server package version is 6.5.0.1,
+                    return '6.5'.  Purpose: so that we can extract the minor
+                    version number, which we assume to be one digit.";
+
+      "os_ver_2" string => string_tail("$(os_ver)", 1);
+
+      "kickstart" string => ifelse("lab", "http://lab-kickstart", "http://default-kickstart");
+
+    redhat_5.!oracle_5::
+
+      "RHEL5_iso"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL5_ISO": {
+                    "id":       { "value": "RHEL5_ISO"},
+                    "name":     { "value": "RHEL5_ISO"},
+                    "baseurl":  { "value": "$(kickstart)/repo/RHEL$(os_ver)_$(sys.arch)"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+      "RHEL5_ISO_HA"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL5_ISO_HA": {
+                    "id":       { "value": "RHEL5_ISO_HA"},
+                    "name":     { "value": "RHEL5_ISO_HA"},
+                    "baseurl":  { "value": "$(kickstart)/repo/RHEL$(os_ver)_$(sys.arch)/HighAvailability"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+
+
+    redhat_5|oracle_5::
+
+      "RHEL5_CUSTOM"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL5_CUSTOM": {
+                    "id":       { "value": "RHEL5_CUSTOM"},
+                    "name":     { "value": "RHEL5_CUSTOM"},
+                    "baseurl":  { "value": "$(kickstart)/mrepo/rhel5s-$(sys.arch)/RPMS.custom"},
+                    "gpgcheck": { "value": "0"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+
+
+    oracle_5::
+
+      "OEL5_ISO_CL"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL5_ISO_CL": {
+                    "id":       { "value": "OEL5_ISO_CL"},
+                    "name":     { "value": "OEL5_ISO_CL"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/Cluster"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+      "OEL5_ISO_CLS"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL5_ISO_CLS": {
+                    "id":       { "value": "OEL5_ISO_CLS"},
+                    "name":     { "value": "OEL5_ISO_CLS"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/ClusterStorage"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+      "OEL5_ISO_SRV"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL5_ISO_SRV": {
+                    "id":       { "value": "OEL5_ISO_SRV"},
+                    "name":     { "value": "OEL5_ISO_SRV"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/Server"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+      "OEL5_ISO_VT"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL5_ISO_VT": {
+                    "id":       { "value": "OEL5_ISO_VT"},
+                    "name":     { "value": "OEL5_ISO_VT"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/VT"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+    redhat_6|oracle_6::
+
+      "RHEL6_ISO"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL6_ISO": {
+                    "id":       { "value": "RHEL6_ISO"},
+                    "name":     { "value": "RHEL6.$(os_ver2)_ISO"},
+                    "baseurl":  { "value": "$(kickstart)/repo/RHEL6.$(os_ver2)_$(sys.arch)"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+      "RHEL6_ISO_HA"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL6_ISO_HA": {
+                    "id":       { "value": "RHEL6_ISO_HA"},
+                    "name":     { "value": "RHEL6.$(os_ver2)_ISO_HA"},
+                    "baseurl":  { "value": "$(kickstart)/repo/RHEL6.$(os_ver2)_$(sys.arch)/HighAvailability"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+      "RHEL6_ISO_LB"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL6_ISO_LB": {
+                    "id":       { "value": "RHEL6_ISO_LB"},
+                    "name":     { "value": "RHEL6.$(os_ver2)_ISO_LB"},
+                    "baseurl":  { "value": "$(kickstart)/repo/RHEL6.$(os_ver2)_$(sys.arch)/LoadBalancer"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+      "RHEL6_ISO_SRV"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL6_ISO_SRV": {
+                    "id":       { "value": "RHEL6_ISO_SRV"},
+                    "name":     { "value": "RHEL6.$(os_ver2)_ISO_SRV"},
+                    "baseurl":  { "value": "$(kickstart)/repo/RHEL6.$(os_ver2)_$(sys.arch)/Server"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+      "RHEL6_CUSTOM"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "RHEL6_CUSTOM": {
+                    "id":       { "value": "RHEL6_CUSTOM"},
+                    "name":     { "value": "RHEL6_CUSTOM"},
+                    "baseurl":  { "value": "$(kickstart)/mrepo/rhel6s-$(sys.arch)/RPMS.custom"},
+                    "gpgcheck": { "value": "0"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+
+    oracle_6::
+
+
+      "OEL6_ISO"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL6_ISO": {
+                    "id":       { "value": "OEL6_ISO"},
+                    "name":     { "value": "OEL6_ISO"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle" }
+                  }
+                }');
+
+      "OEL6_ISO_HA"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL6_ISO_HA": {
+                    "id":       { "value": "OEL6_ISO_HA"},
+                    "name":     { "value": "OEL6_ISO_HA"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/HighAvailability"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle" }
+                  }
+                }');
+
+
+      "OEL6_ISO_LB"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL6_ISO_LB": {
+                    "id":       { "value": "OEL6_ISO_LB"},
+                    "name":     { "value": "OEL6_ISO_LB"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/LoadBalancer"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle" }
+                  }
+                }');
+
+
+      "OEL6_ISO_SRV"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "OEL6_ISO_SRV": {
+                    "id":       { "value": "OEL6_ISO_SRV"},
+                    "name":     { "value": "OEL6_ISO_SRV"},
+                    "baseurl":  { "value": "$(kickstart)/repo/OEL$(os_ver)_$(sys.arch)/Server"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle" }
+                  }
+                }');
+
+
+    lab.redhat_6.!oracle_6::
+
+
+      "VMWARE_TOOL_OSP"
+        meta => { "yum_repos_d" },
+        data => parsejson('{
+                  "VMWARE_TOOL_OSP": {
+                    "id":       { "value": "VMWARE_TOOL_OSP"},
+                    "name":     { "value": "VMWARE_TOOL_OSP"},
+                    "baseurl":  { "value": "$(kickstart)/mrepo/vmware-tools-osp/esx5.1u2-6Server-$(sys.arch)"},
+                    "gpgcheck": { "value": "1"},
+                    "gpgkey":   { "value": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release" }
+                  }
+                }');
+
+    # It is important to return to the *any* class restriction so that we
+    # always try to consolidate the defined repos
+    any::
+      # Find all of the repo definitions (variables in this bundle tagged with "yum_repos_d")
+      "repo_defs" slist => variablesmatching("$(this.namespace):$(this.bundle)\..*", "yum_repos_d");
+
+      # Now we merge them all together into a single data var
+      "data" data => parsejson('[]');
+      "data" data => mergedata(data, $(repo_defs));
+
+     # These variables are only useful when debugging
+     DEBUG|DEBUG_yum_repository_definitions::
+       "s_data" string => format("%S", data);
+       "repo_ids" slist => getindices(data);
+       "repo_def_count" int => length(repo_ids);
+
+   reports:
+     DEBUG|DEBUG_yum_repository_definitions::
+       "DEBUG $(this.bundle) YES THIS ONE";
+       "$(const.t) Found '$(repo_def_count)' yum repo client definitions";
+       "$(const.t) Found yum_repos_d client definition for '$(repo_ids)'";
+       "$(const.t) Serialized Data: '$(s_data)'";
+       "$(const.t) OS Version: '$(os_ver)'";
+       "$(const.t) OS Minor Version: '$(os_ver_2)'";
+}

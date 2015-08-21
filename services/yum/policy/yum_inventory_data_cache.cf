@@ -1,0 +1,82 @@
+bundle common yum_inventory_data_cache_file_control
+{
+  vars:
+    "input[lib]" string => "$(this.promise_dirname)/lib.cf";
+    "inputs" slist => getvalues(input);
+}
+
+body file control
+{
+  inputs => { @(yum_inventory_data_cache_file_control.inputs) };
+}
+
+bundle agent yum_inventory_data_cache
+{
+  meta:
+    "description" string => "Cache yum information for inventory. All yum
+                             inventory bundles should use caching. As yum
+                             is kind of intense on the disk IO.";
+
+  vars:
+    "state_dir" string => "$(yum_inventory.state_dir)";
+    "yum_info_state_file" string => "$(state_dir)/yum_info_yum.txt";
+    "yum_repolist_disabled_state_file" string => "$(state_dir)/yum_repolist_disabled.txt";
+    "yum_repolist_enabled_state_file" string => "$(state_dir)/yum_repolist_enabled.txt";
+
+    # Maybe instead of a list, we just select all files in the directory.
+    "cache_files" slist => {
+                             "$(yum_info_state_file)",
+                             "$(yum_repolist_disabled_state_file)",
+                             "$(yum_repolist_enabled_state_file)",
+                            };
+
+    "max_cache_hours"
+      int => "24",
+      comment => "Repos that are enabled, or disable and yum plugins don't
+                  change very often, re-populating the cache once a day is
+                  likely sufficient.";
+
+  classes:
+    "yum_info_yum_cache_invalid"
+       not => fileexists( $(yum_info_state_file) );
+
+    "yum_repolist_disabled_cache_invalid"
+       not => fileexists( $(yum_repolist_disabled_state_file) );
+
+    "yum_repolist_enabled_cache_invalid"
+       not => fileexists( $(yum_repolist_enabled_state_file) );
+
+  files:
+      "$(yum_inventory.state_dir)/."
+        create => "true",
+        comment => "We need a place to store our state for processing";
+
+      # It would be nice to be able to promise a files content be the result of
+      # a command output
+      # "$(yum_info_state_file)"
+      #   transformer => "$(paths.yum) info yum > "
+
+      # We don't want the data to be too stale, so we purge cached files if they are old.
+      "$(state_dir)/."
+        delete => tidy,
+        depth_search => recurse("inf"),
+        file_select => hours_old($(max_cache_hours));
+
+  commands:
+    yum_info_yum_cache_invalid::
+      # This feels hacky, is there a way I can use a body to specify the
+      # commands stdout and stderr
+      "$(paths.yum)"
+        args => "info yum > $(yum_info_state_file)",
+        contain => in_shell;
+
+    yum_repolist_disabled_cache_invalid::
+      "$(paths.yum)"
+        args => "repolist disabled > $(yum_repolist_disabled_state_file)",
+        contain => in_shell;
+
+    yum_repolist_enabled_cache_invalid::
+      "$(paths.yum)"
+        args => "repolist enabled > $(yum_repolist_enabled_state_file)",
+        contain => in_shell;
+}
