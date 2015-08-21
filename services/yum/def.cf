@@ -1,7 +1,7 @@
 bundle common yum_def_file_control
 {
   vars:
-    enable_yum_inventory::
+    #enable_yum_inventory::
       "input[yum_inventory]"
         string => "$(this.promise_dirname)/policy/yum_inventory.cf";
 

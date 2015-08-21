@@ -1,0 +1,9 @@
+bundle agent autorun_inventory_yum
+{
+  meta:
+      "tags" slist => { "autorun" };
+
+  methods:
+      "Inventory Yum"
+        usebundle => yum_inventory;
+}
