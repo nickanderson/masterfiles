@@ -33,7 +33,7 @@ body common control
       };
 
       # Uncomment to connect to the hub using latest protocol.
-      #protocol_version => "latest";
+      protocol_version => "2";
 }
 
 #############################################################################

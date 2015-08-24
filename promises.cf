@@ -70,7 +70,7 @@ body common control
       #    package_module => $(package_module_knowledge.platform_default);
 
       # Uncomment to connect to the hub using latest protocol.
-      #protocol_version => "latest";
+      protocol_version => "2";
 
       #   goal_categories => { "goals", "targets", "milestones" };
       #   goal_patterns   => { "goal_.*", "target.*","milestone.*" };
