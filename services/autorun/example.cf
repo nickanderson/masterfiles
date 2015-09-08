@@ -1,0 +1,8 @@
+bundle agent example
+{
+  vars:
+    "intenvory"
+      string => execresult("/bin/hostname", noshell),
+      meta => { "inventory", "attribute_name=Custom Inventory" },
+      comment => "You can easily collect any information you like";
+}
