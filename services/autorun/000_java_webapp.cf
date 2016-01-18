@@ -1,0 +1,131 @@
+bundle agent 000_java_webapp
+{
+  meta:
+    "tags" slist => { "autorun" };
+
+  vars:
+      "webapp_data"
+        data => readjson("$(this.promise_dirname)/webapp_data.json", 1M),
+	comment => "This is where the host figures out which version of the
+                    webapp should be running";
+
+  classes:
+    "tomcat_server"
+      expression => "!policy_server",
+      comment => "In our simple environment all hosts that are not policy
+                  servers are a tomcat server.";
+
+  methods:
+    
+    tomcat_server::
+      "Tomcat"
+        usebundle => tomcat;
+
+      # Here use use the data we sourced from $(webapp_data) to ensure the
+      # proper application version is configured.
+      "Webapp"
+        usebundle => webapp("$(webapp_data[name])", "$(webapp_data[version])"),
+        comment => "From https://tomcat.apache.org/tomcat-8.0-doc/appdev/sample/sample.war";
+}
+
+bundle agent tomcat
+# @brief Install tomcat and make sure it stays running.
+{
+  vars:
+    "logging_properties"
+      string => "/etc/tomcat6/logging.properties";
+
+    "logging_properties_template"
+      string => "$(this.promise_dirname)/../../templates/tomcat6_logging.properties.mustache";
+
+    "server_xml"
+      string => "/etc/tomcat6/server.xml";
+
+    "server_xml_template"
+      string => "$(this.promise_dirname)/../../templates/tomcat6_server.xml.mustache";
+
+    SIT|UAT::
+      "connector_port" string => "8080";
+
+    PROD::
+      "connector_port" string => "8090";
+
+  files:
+    "$(logging_properties)"
+      edit_template => "$(logging_properties_template)",
+      template_method => "mustache",
+      comment => "Each environemt uses custom properties based on a standard template",
+      classes => scoped_classes_generic("bundle", "logging_properties");
+
+    "$(server_xml)"
+      edit_template => "$(server_xml_template)",
+      template_method => "mustache",
+      comment => "The connector port is set based on the environment class",
+      classes => scoped_classes_generic("bundle", "server_xml");
+
+  packages:
+    "tomcat6"
+      policy => "present",
+      package_module => yum;
+
+  services:
+    any::
+      "tomcat6"
+        service_policy => "start";
+
+    logging_properties_repaired|server_xml_repaired::
+      "tomcat6"
+        service_policy => "restart";
+}
+
+bundle agent webapp(webapp_name, webapp_version)
+# @brief Deploy a webapp war from a known repository update the symlink and
+# restart tomcat when appropriate
+# @param webapp_name The name of the webapp to deploy
+# @param webapp_version The version of the webapp to deploy
+# Note: Webapps are expected to be named in the following format
+# $(webapp_name)_$(webapp_version).war
+{
+  vars:
+    "deploy_dir" string => "/var/lib/tomcat6/webapps";
+    "webapp_repo" string => "/vagrant/webapps";
+    "webapp_package" string => "$(webapp_name)_$(webapp_version).war";
+    "current_webapp_dir" string => "$(deploy_dir)/$(webapp_name)_$(webapp_version)";
+
+  files:
+    "$(deploy_dir)/$(webapp_package)"
+      copy_from => local_dcp("$(webapp_repo)/$(webapp_package)"),
+      classes => scoped_classes_generic("bundle", "$(webapp_name)_war"),
+      comment => "We want the desired version of the war file to be in place,
+                 copied from our repository.";
+
+    "$(deploy_dir)/$(webapp_package)"
+      perms => mog("644", "root", "root");
+
+    "$(deploy_dir)/$(webapp_name)"
+      create => "true",
+      link_from => ln_s("$(current_webapp_dir)"),
+      move_obstructions => "true",
+      ifvarclass => isdir("$(current_webapp_dir)"),
+      comment => "If the webapp has been unpacked then we want the symlink to
+                  point to the proper version.",
+      classes => scoped_classes_generic("bundle", "$(webapp_name)_symlink");
+
+  services:
+    "tomcat6"
+      service_policy => "restart",
+      ifvarclass => canonify("$(webapp_name)_symlink_repaired"),
+      comment => "If we repoint the symlink we need to restart in order to
+                  clear tomcats cache. If not we never see the new content";
+
+  users:
+    "test_user"
+      policy => "absent";
+
+  reports:
+    "DEBUG|DEBUG_$(this.bundle)"::
+      "DEBUG $(this.bundle) Symlink for '$(webapp_name)' updated"
+        ifvarclass => canonify("$(webapp_name)_symlink_repaired");
+      "DEBUG $(this.bundle) War '$(deploy_dir)/$(webapp_package)' updated"
+        ifvarclass => canonify("$(webapp_name)_war_repaired");
+}
