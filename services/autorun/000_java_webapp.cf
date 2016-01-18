@@ -1,7 +1,8 @@
 bundle agent 000_java_webapp
 {
   meta:
-    "tags" slist => { "autorun" };
+    enable_sample_java_webapp::
+      "tags" slist => { "autorun" };
 
   vars:
       "webapp_data"
@@ -52,22 +53,30 @@ bundle agent tomcat
       "connector_port" string => "8090";
 
   files:
-    "$(logging_properties)"
-      edit_template => "$(logging_properties_template)",
-      template_method => "mustache",
-      comment => "Each environemt uses custom properties based on a standard template",
-      classes => scoped_classes_generic("bundle", "logging_properties");
+    enable_sample_java_webapp::
+      "$(logging_properties)"
+        edit_template => "$(logging_properties_template)",
+        template_method => "mustache",
+        comment => "Each environemt uses custom properties based on a standard template",
+        classes => scoped_classes_generic("bundle", "logging_properties");
 
-    "$(server_xml)"
-      edit_template => "$(server_xml_template)",
-      template_method => "mustache",
-      comment => "The connector port is set based on the environment class",
-      classes => scoped_classes_generic("bundle", "server_xml");
+      "$(server_xml)"
+        edit_template => "$(server_xml_template)",
+        template_method => "mustache",
+        comment => "The connector port is set based on the environment class",
+        classes => scoped_classes_generic("bundle", "server_xml");
 
   packages:
-    "tomcat6"
-      policy => "present",
-      package_module => yum;
+    enable_sample_java_webapp::
+      "tomcat6"
+        policy => "present",
+        package_module => yum;
+
+    disable_sample_java_webapp::
+      "tomcat6"
+        policy => "absent",
+        package_module => yum;
+
 
   services:
     any::
@@ -94,23 +103,25 @@ bundle agent webapp(webapp_name, webapp_version)
     "current_webapp_dir" string => "$(deploy_dir)/$(webapp_name)_$(webapp_version)";
 
   files:
-    "$(deploy_dir)/$(webapp_package)"
-      copy_from => local_dcp("$(webapp_repo)/$(webapp_package)"),
-      classes => scoped_classes_generic("bundle", "$(webapp_name)_war"),
-      comment => "We want the desired version of the war file to be in place,
-                 copied from our repository.";
+    enable_sample_java_webapp::
+      "$(deploy_dir)/$(webapp_package)"
+        copy_from => local_dcp("$(webapp_repo)/$(webapp_package)"),
+        classes => scoped_classes_generic("bundle", "$(webapp_name)_war"),
+        comment => "We want the desired version of the war file to be in place,
+                   copied from our repository.";
 
-    "$(deploy_dir)/$(webapp_package)"
-      perms => mog("644", "root", "root");
+      "$(deploy_dir)/$(webapp_package)"
+        perms => mog("644", "root", "root");
 
-    "$(deploy_dir)/$(webapp_name)"
-      create => "true",
-      link_from => ln_s("$(current_webapp_dir)"),
-      move_obstructions => "true",
-      ifvarclass => isdir("$(current_webapp_dir)"),
-      comment => "If the webapp has been unpacked then we want the symlink to
-                  point to the proper version.",
-      classes => scoped_classes_generic("bundle", "$(webapp_name)_symlink");
+      "$(deploy_dir)/$(webapp_name)"
+        create => "true",
+        link_from => ln_s("$(current_webapp_dir)"),
+        move_obstructions => "true",
+        ifvarclass => isdir("$(current_webapp_dir)"),
+        comment => "If the webapp has been unpacked then we want the symlink to
+                    point to the proper version.",
+        classes => scoped_classes_generic("bundle", "$(webapp_name)_symlink");
+
 
   services:
     "tomcat6"
@@ -120,8 +131,15 @@ bundle agent webapp(webapp_name, webapp_version)
                   clear tomcats cache. If not we never see the new content";
 
   users:
-    "test_user"
-      policy => "absent";
+    disable_sample_java_webapp::
+      "test_user"
+        policy => "absent";
+
+
+  methods:
+    disable_sample_java_webapp::
+      "Purge Deployment Directory"
+        usebundle => rm_rf( $(deploy_dir) );
 
   reports:
     "DEBUG|DEBUG_$(this.bundle)"::

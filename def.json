@@ -5,7 +5,9 @@
     {
         "enable_phased_rollout": [ "any" ],
 	"enable_yum_inventory": [ "redhat", "centos" ],
-	"services_autorun" : [ "any" ]
+	"services_autorun" : [ "any" ],
+	"stub_enable_sample_java_webapp": [ "any" ],
+	"disable_sample_java_webapp": [ "any" ]
     }
 
 }
