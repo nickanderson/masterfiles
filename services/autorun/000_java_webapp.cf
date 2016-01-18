@@ -44,8 +44,9 @@ bundle agent tomcat
     "server_xml_template"
       string => "$(this.promise_dirname)/../../templates/tomcat6_server.xml.mustache";
 
-    SIT|UAT::
-      "connector_port" string => "8080";
+    # This is the default connector_port, we can override it based on class as
+    # seen below.
+    "connector_port" string => "8080";
 
     PROD::
       "connector_port" string => "8090";
