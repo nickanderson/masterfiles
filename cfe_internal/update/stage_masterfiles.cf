@@ -11,6 +11,8 @@ bundle agent stage_masterfiles
       "masterfiles_destination"
         string => "/var/cfengine/policychannel";
 
+      # These are all of the available policy channels
+      # This list is required so that the hub can keep each distribuiton point up to date
       "policy_channels"
         slist => { "production_1", "production_2", "development", "tag" };
 

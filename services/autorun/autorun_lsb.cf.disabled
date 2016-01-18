@@ -1,0 +1,11 @@
+bundle agent autorun_lsb
+{
+  meta:
+    "tags" slist => { "autorun" };
+
+  packages:
+    redhat_6|centos_6::
+      "redhat-lsb"
+        policy => "present",
+        package_module => yum;
+}

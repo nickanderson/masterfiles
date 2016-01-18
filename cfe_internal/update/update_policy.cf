@@ -33,7 +33,8 @@ bundle agent cfe_internal_update_phase_data
 {
   meta:
     "description"
-      string => "Update phase data from policy server";
+      string => "Update phase data (policy channel groups) from policy server
+                 so that we use the freshest information available.";
 
   vars:
     "path[remote_phase_definition]" -> { "Redmine#7443" }
