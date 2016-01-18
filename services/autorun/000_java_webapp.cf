@@ -1,7 +1,6 @@
 bundle agent 000_java_webapp
 {
   meta:
-    enable_sample_java_webapp::
       "tags" slist => { "autorun" };
 
   vars:
@@ -79,9 +78,13 @@ bundle agent tomcat
 
 
   services:
-    any::
+    enable_sample_java_webapp::
       "tomcat6"
         service_policy => "start";
+
+    disable_sample_java_webapp::
+      "tomcat6"
+        service_policy => "stop";
 
     logging_properties_repaired|server_xml_repaired::
       "tomcat6"
