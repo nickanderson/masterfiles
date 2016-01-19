@@ -1,11 +1,10 @@
 bundle agent autorun_lsb
 {
   meta:
-    enable_autorun_lsb::
       "tags" slist => { "autorun" };
 
   packages:
-    redhat_6|centos_6::
+    (redhat_6|centos_6).enable_autorun_lsb::
       "redhat-lsb"
         policy => "present",
         package_module => yum;
