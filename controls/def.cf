@@ -170,6 +170,10 @@ bundle common def
         int => "200",
         ifvarclass => not( isvariable( "control_server_maxconnections" ) );
 
+      "mpf_update_policy_inputs_method"
+        string => "inputs_copy_of_masterfiles_when_cf_promises_validated",
+        ifvarclass => not( isvarianble( $(this.promiser) ) ),
+        comment => "The bundle to evaluate to ensure inputs has the latest policy.";
 
     debian::
       "environment_vars"

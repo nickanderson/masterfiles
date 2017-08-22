@@ -71,6 +71,23 @@ As is typical for CFEngine, the policy and the configuration are mixed. In
 to `controls/update_def.cf` as you read this. We are skipping the nonessential
 ones.
 
+### Policy update bundle
+
+By default the `inputs_copy_of_masterfiles_when_cf_promises_validated` is used
+to ensure `sys.inputdir` has an up to date copy of masterfiles. Override this
+bundle by defining `def.mpf_update_policy_inputs_method`.
+
+
+Example override via augments:
+
+```
+{
+  "vars": {
+    "mpf_upate_policy_inputs_method": "my_custom_policy_update_bundle"
+  }
+}
+```
+
 ### Verify update transfers
 
 Enable additional verrification after file transfers during policy update by
