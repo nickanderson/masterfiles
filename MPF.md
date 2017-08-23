@@ -250,7 +250,7 @@ hosts.
 }
 ```
 
-### Main Policy (promises.cf)
+## Main Policy (promises.cf)
 
 The following settings are defined in `controls/def.cf` can be set from an
 [augments file][Augments].
