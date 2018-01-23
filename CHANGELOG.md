@@ -1,20 +1,18 @@
 # Changelog
 Notable changes to the framework should be documented here
 
-3.12.0 alpha:
+3.12.0a1:
 	- server control maxconnections can be configured via augments
 	  (CFE-2660)
 	- Allow configuration of allowlegacyconnects from augments (ENT-3375)
-	- zendesk#3432: fix zypper package downgrade failing because zypper prefers format NAME.ARCH=VERSION
+	- Fix ability for zypper package_module to downgrade packages
 	- splaytime in body executor control can now be configured via augments
-	  This change allows the splaytime to be configured vi augments (def.json). If no
-	  augments value is defined, then it defaults to 4. So by default when a scheduled
-	  execution is triggered hosts will wait between 0 and 4 minutes before running
-	  exec_command. (CFE-2699)
+	  (CFE-2699)
 	- Add maintenance policy to refresh events table on enterprise hubs
 	  (ENT-3537)
 	- Add apache config for new LDAP API (ENT-3265)
 	- update.cf bundlesequence can be configured via augments (CFE-2521)
+	- Update policy inputs can be extended via augments (CFE-2702)
 	- Add oracle linux support to standalone self upgrade
 	- Add bundle to track component variables to restart when necessary
 	  (CFE-2326)
@@ -24,12 +22,10 @@ Notable changes to the framework should be documented here
 	- Add lines_present edit_lines bundle
 	- schedule in body executor control can now be configured via augments
 	  (CFE-2508)
-	- Use the proper version of php for webserver config when available
-	  (ENT-3451)
 	- Include scheduled report assets in self maintenance (ENT-3558)
 	- Remove unused body action aggregator and body file_select folder
 	- Remove unused body process_count check_process
-	- : prevent yum from locking in package_methods when possible
+	- prevent yum from locking in package_methods when possible
 	  (CFE-2759)
 	- Render variables tagged for inventory from agent host_info_report
 	  (CFE-2750)
@@ -43,7 +39,6 @@ Notable changes to the framework should be documented here
 	- Add support for 32bit rpms in standalone self upgrade (ENT-3377)
 	- Add enterprise maintenance bundles to host info report (ENT-3537)
 	- Removed unnecessary promises for OOTB package inventory
-	- Update policy inputs can be extended via augments (CFE-2702)
 	- Add external watchdog support for stuck cf-execd (ENT-3251)
 	- Be less noisy when a promised service is not found (CFE-2690)
 	- Ignore empty options in apt_get module (CFE-2685)
@@ -57,13 +52,10 @@ Notable changes to the framework should be documented here
 	  (ENT-3395)
 	- Fix self upgrade for hosts older than 3.7.4 (ENT-3368)
 	- Avoid self upgrade from triggering during bootstrap (ENT-3394)
-	- Pass --oldpackage to zypper to allow downgrading packages, but check first if the zypper version supports it.
-	  (CFE-2643)
 	- Add json templates for rendering serial and multiline data (CFE-2713)
 	- Removed unused libraries and controls
 	- fixed an error in the file_make_mustache_*, incorrect variable name used
 	  (CFE-2714)
-	- Add refresh new inventory cache tables in enterprise edition
 
 3.11.0:
 	- Rename enable_client_initiated_reporting to client_initiated_reporting_enabled
