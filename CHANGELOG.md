@@ -22,7 +22,7 @@ Notable changes to the framework should be documented here
 	- cf-execd service override template now only kills cf-execd on stop
 	  (ENT-3395)
 	- Policy Release Id is now inventoried by default (CFE-2097)
-	- Avoid self upgrade from triggering during bootstrap (ENT-3394)
+	- Avoid triggering self upgrade during bootstrap (ENT-3394)
 	- Maintain access to exported CSV reports in older versions (ENT-3572)
 	- prevent yum from locking in package_methods when possible (CFE-2759)
 
