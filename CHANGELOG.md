@@ -6,22 +6,22 @@ Notable changes to the framework should be documented here
 	- Add inventory of AWS EC2 linux instances (CFE-2924)
 	- Add ubuntu 18 to package map for self upgrade (ENT-4118)
 	- Allow dmidefs inventory to be overridden via augments (CFE-2927)
-	- Also list  packages updates for hold packages: (CFE-2855)
+	- apt_get module now includes held packages when listing updates: (CFE-2855)
 	- Analyze yum return code before parsing its output (CFE-2868)
 	- Cleanup old report data relative to the most recent changetimestamp
 	  (ENT-4807)
 	- Create desired version tracking data when necessary (ENT-3937)
-	- Detect systemd service enablement for non native services (CFE-2932)
-	- Fix name of tunable to control max client side report history
+	- Detect systemd service enablement for non-native services (CFE-2932)
+	- Fix name of tunable to control max client-side report history
 	  (CFE-2926)
 	- Fix package_latest detecting larger version in some cases (CFE-1743)
-	- Fix standalone self upgrade when path contains spaces (ENT-4117)
-	- Fix unattended self upgrade on AIX (ENT-3972)
+	- Fix standalone self-upgrade when path contains spaces (ENT-4117)
+	- Fix unattended self-upgrade on AIX (ENT-3972)
 	- Inventory Physical Memory MB when dmidecode is found (CFE-2896)
 	- Only consider files that exist for rotation (ENT-3946)
 	- Prevent noise when a service that should be disabled is missing.
 	  (CFE-2690)
-	- Prevent standalone self upgrade from triggering un-necessarily
+	- Prevent standalone self-upgrade from triggering un-necessarily
 	  (ENT-4092)
 	- Remove more smartquotes (ENT-3823)
 	- Remove un-necessary agent run during self upgrade (ENT-4116)
