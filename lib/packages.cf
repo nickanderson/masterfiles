@@ -71,6 +71,9 @@ bundle common package_module_knowledge
 
     slackware::
       "platform_default" string => "slackpkg";
+
+    windows::
+      "platform_default" string => "msiexec";
 }
 
 body package_module apt_get
@@ -175,6 +178,14 @@ body package_module freebsd_ports
 {
     query_installed_ifelapsed => "60";
     query_updates_ifelapsed => "1440";
+}
+
+body package_module msiexec
+{
+    query_installed_ifelapsed => "60";
+    query_updates_ifelapsed => "1440";
+    interpreter => "$(sys.winsysdir)$(const.dirsep)cmd.exe /c ";
+    module_path => "$(def.dir_modules)$(const.dirsep)packages$(const.dirsep)msiexec.bat";
 }
 
 bundle common packages_common
