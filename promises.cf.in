@@ -190,6 +190,7 @@ bundle common cfengine_stdlib
 # @brief Include the standard library
 {
   vars:
+
     !cfengine_3_7::
       # CFEngine 3.6 can include through a secondary file
       # CFEngine version 3.6 and prior use the split library to avoid syntax
@@ -197,6 +198,19 @@ bundle common cfengine_stdlib
       # This also works for 3.8 because local_libdir should be set to lib
       # instead of lib/3.8
       "inputs" slist => { "$(sys.local_libdir)/stdlib.cf" };
+
+    !cfengine_3_7.windows.(cfengine_3_12|cfengine_3_13|cfengine_3_14|cfengine_3_15).!cfengien_3_12_0::
+
+      # As part of ENT-2719 3.12.2 introduced package_method attributes for
+      # specifying the interpreter and specifying the module path. These
+      # attributes are not known in previous versions and must not be seen by
+      # the parser or they will be seen as syntax errors. A cleaner way to do
+      # this using the minimum_version macro is possible, but that would break
+      # masterfiles compatibility in 3.12 with 3.7 binaries since 3.7 binaries
+      # do not support major.minor.patch with minimum_version, only major.minor.
+
+      "inputs" slist => { "$(sys.local_libdir)/stdlib.cf",
+                          "$(sys.logal_libdir)/packages-ENT-3719.cf" };
 
     cfengine_3_7::
       # CFEngine 3.7 has local_libdir set to $(sys.inputdir)/lib/3.7, but with
