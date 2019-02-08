@@ -72,7 +72,7 @@ bundle common package_module_knowledge
     slackware::
       "platform_default" string => "slackpkg";
 
-    windows.(cfengine_3_12|cfengine_3_13|cfengine_3_14|cfengine_3_15).!cfengien_3_12_0::
+    windows.(cfengine_3_12|cfengine_3_13|cfengine_3_14|cfengine_3_15).!cfengine_3_12_0::
       "platform_default" string => "msiexec";
 }
 
