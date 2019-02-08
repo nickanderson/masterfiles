@@ -199,7 +199,7 @@ bundle common cfengine_stdlib
       # instead of lib/3.8
       "inputs" slist => { "$(sys.local_libdir)/stdlib.cf" };
 
-    !cfengine_3_7.windows.(cfengine_3_12|cfengine_3_13|cfengine_3_14|cfengine_3_15).!cfengien_3_12_0::
+    !cfengine_3_7.windows.(cfengine_3_12|cfengine_3_13|cfengine_3_14|cfengine_3_15).!cfengine_3_12_0::
 
       # As part of ENT-2719 3.12.2 introduced package_method attributes for
       # specifying the interpreter and specifying the module path. These
