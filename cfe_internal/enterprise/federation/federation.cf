@@ -161,7 +161,7 @@ bundle agent federation_manage_files
 
     am_transporter::
       "$(cfengine_enterprise_federation:config.bin_dir)/transport.sh"
-        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/transport.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/transport.sh" ),
         perms => default:mog( "700", "root", "root" );
 
     am_superhub::
