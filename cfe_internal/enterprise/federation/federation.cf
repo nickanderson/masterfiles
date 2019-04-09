@@ -170,7 +170,7 @@ bundle agent federation_manage_files
         perms => default:mog( "700", "root", "root" );
 
       "$(cfengine_enterprise_federation:config.bin_dir)/import_file.sh"
-        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/import_file.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/import_file.sh" ),
         perms => default:mog( "700", "root", "root" );
 
       "$(cfengine_enterprise_federation:config.bin_dir)/filter.sed"
