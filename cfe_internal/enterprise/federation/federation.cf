@@ -166,7 +166,7 @@ bundle agent federation_manage_files
 
     am_superhub::
       "$(cfengine_enterprise_federation:config.bin_dir)/import.sh"
-        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/import.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/import.sh" ),
         perms => default:mog( "700", "root", "root" );
 
       "$(cfengine_enterprise_federation:config.bin_dir)/import_file.sh"
