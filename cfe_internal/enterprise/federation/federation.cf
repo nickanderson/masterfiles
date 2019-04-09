@@ -156,7 +156,7 @@ bundle agent federation_manage_files
 
     am_feeder::
       "$(cfengine_enterprise_federation:config.bin_dir)/dump.sh"
-        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/dump.sh" ),
+        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/dump.sh" ),
         perms => default:mog( "700", "root", "root" );
 
     am_transporter::
