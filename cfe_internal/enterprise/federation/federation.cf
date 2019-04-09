@@ -174,7 +174,7 @@ bundle agent federation_manage_files
         perms => default:mog( "700", "root", "root" );
 
       "$(cfengine_enterprise_federation:config.bin_dir)/filter.sed"
-        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/filter.sed" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/filter.sed" ),
         perms => default:mog( "600", "root", "root" );
 
 
