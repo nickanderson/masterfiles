@@ -151,30 +151,30 @@ bundle agent federation_manage_files
         perms => default:mog( "600", "root", "root" );
 
       "$(cfengine_enterprise_federation:config.bin_dir)/parallel.sh"
-        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/parallel.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/parallel.sh" ),
         perms => default:mog( "600", "root", "root" );
 
     am_feeder::
       "$(cfengine_enterprise_federation:config.bin_dir)/dump.sh"
-        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/dump.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/federated_reporting/dump.sh" ),
         perms => default:mog( "700", "root", "root" );
 
     am_transporter::
       "$(cfengine_enterprise_federation:config.bin_dir)/transport.sh"
-        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/transport.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/transport.sh" ),
         perms => default:mog( "700", "root", "root" );
 
     am_superhub::
       "$(cfengine_enterprise_federation:config.bin_dir)/import.sh"
-        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/import.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/import.sh" ),
         perms => default:mog( "700", "root", "root" );
 
       "$(cfengine_enterprise_federation:config.bin_dir)/import_file.sh"
-        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/import_file.sh" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/import_file.sh" ),
         perms => default:mog( "700", "root", "root" );
 
       "$(cfengine_enterprise_federation:config.bin_dir)/filter.sed"
-        copy_from => local_dcp( "$(this.promise_dirname)/../../../templates/filter.sed" ),
+        copy_from => default:local_dcp( "$(this.promise_dirname)/../../../templates/filter.sed" ),
         perms => default:mog( "600", "root", "root" );
 
 
