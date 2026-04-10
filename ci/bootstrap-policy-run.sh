@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 set -ex
-./autogen.sh --prefix=/var/lib/cfengine
+./autogen.sh
 make install
+export PATH=/var/cfengine/bin:$PATH
 which cf-agent
 cf-agent -IB $(hostname -i) | tee bootstrap.log
 cf-agent -KIf update.cf | tee update.log
