@@ -21,7 +21,6 @@ if docker images | grep mpf; then
 fi
 
 # run the test
-ls "${NTECH_ROOT}"
 docker build -t mpf -f "${NTECH_ROOT}"/masterfiles/ci/bootstrap-policy-run.Dockerfile  "${NTECH_ROOT}"
 docker run --workdir /masterfiles --tty mpf sh /masterfiles/ci/bootstrap-policy-run.sh
 if grep error *.log; then
