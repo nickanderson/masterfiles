@@ -3,6 +3,11 @@ on:
 
 jobs:
   bootstrap_policy_run_check:
+    strategy:
+      fail-fast: false
+      matrix:
+        cfengine_version: [ "3.21.8", "3.24.3", "3.27.0", "master" ]
+
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -14,6 +19,7 @@ jobs:
         id: together
         with:
           myToken: ${{ secrets.GITHUB_TOKEN }}
+# todo: ignore togethers, or maybe include building from source as part of the matrix?
       - name: Checkout Core
         uses: actions/checkout@v4
         with:
@@ -22,4 +28,4 @@ jobs:
           ref: ${{steps.together.outputs.core || github.base_ref || github.ref}}
           submodules: recursive
       - name: Install, bootstrap, policy run
-        run: masterfiles/ci/docker-bootstrap-policy-run.sh
+        run: masterfiles/ci/docker-bootstrap-policy-run.sh ${{ matrix.cfengine_version }}
