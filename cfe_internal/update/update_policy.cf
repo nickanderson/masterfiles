@@ -807,8 +807,7 @@ bundle agent modules_presence
     "_custom_template_paths" slist => findfiles("$(_custom_template_dir)*.mustache"), if => isdir( "$(_custom_template_dir)" );
     "_package_paths"
         with => ifelse( or( cf_version_between( "3.24.0", "3.24.3"),
-                            cf_version_at("3.26.0"),
-                            cf_version_minimum("3.27.0")), "$(const.dirsep)",
+                            cf_version_between( "3.25.0", "3.27.0")), "$(const.dirsep)",
                         ""),
         slist => filter("$(_override_dir)vendored$(with)", _package_paths_tmp, "false", "true", 999);
 
