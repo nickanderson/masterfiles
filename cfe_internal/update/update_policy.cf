@@ -317,6 +317,11 @@ bundle agent cfe_internal_update_policy_cpv
     any::
       # Install vendored and user provided modules to $(sys.workdir) from $(sys.inputdir)
       "modules_presence";
+
+    cfengine_internal_report_unmanaged_modules|cfengine_internal_purge_unmanaged_modules::
+      # ENT-10483: report and optionally cull unmanaged files from moduledir.
+      # Runs after modules_presence so the expected-module lists are populated.
+      "modules_cleanup";
 }
 
 bundle agent cfe_internal_update_cmdb
@@ -908,11 +913,12 @@ bundle agent modules_presence
   # ensure that the modules scripts are copied as part of
   # update (see controls/update_def.cf input_name_patterns var.
   files:
-    "$(moduledir)/packages/$(_vendored_modules)"
+    "$(moduledir)/packages/$(_vendored_modules)" -> { "ENT-10483" }
       create => "true",
       perms => u_mo("755", "root"),
       unless => canonify("override_vendored_module_$(_vendored_modules)"),
       edit_template => "$(_vendored_dir)$(_vendored_modules).mustache",
+      edit_defaults => u_no_backup,
       template_method => "mustache";
 
     "$(moduledir)/packages/$(_override_modules)"
@@ -923,11 +929,12 @@ bundle agent modules_presence
         canonify("override_module_$(_override_modules)")
       );
 
-    "$(moduledir)/$(_custom_template_modules)" -> { "ENT-10793" }
+    "$(moduledir)/$(_custom_template_modules)" -> { "ENT-10793", "ENT-10483" }
       comment => "We want to render mustache templated modules",
       handle => "cfe_internal_update_policy_files_custom_template_modules",
       template_method => "mustache",
       edit_template => "$(_custom_template_dir)$(_custom_template_modules).mustache",
+      edit_defaults => u_no_backup,
       perms => u_mo("500", "root"),
       if => fileexists(
         "$(_custom_template_dir)$(_custom_template_modules).mustache"
@@ -964,6 +971,145 @@ bundle agent modules_presence
 
       "canonified: $(with)"
         with => canonify("override_vendored_module_$(_vendored_modules)");
+}
+
+bundle agent modules_cleanup
+# @brief Report on and optionally purge unmanaged files from the modules directory
+#
+# @description Diffs the files present in moduledir against the set
+#              `modules_presence` delivers and reports the extras, or deletes
+#              them, both opt-in via classes in controls/update_def.cf:
+#
+#              - `cfengine_internal_report_unmanaged_modules` reports only.
+#              - `cfengine_internal_purge_unmanaged_modules`  reports and deletes.
+#
+#              A plain `purge` can not be used, as it would delete the package
+#              modules rendered into moduledir by separate promises.
+#
+# @note Anything in moduledir not delivered by `modules_presence` is unmanaged
+#       and will be deleted when purging is enabled. Empty directories are left.
+{
+  vars:
+    any::
+      # moduledir and the modules source (what modules_presence copies from),
+      # normalized to forward slashes: findfiles() returns forward-slash paths
+      # on every platform, so difference() can compare like with like.
+      "_moduledir"
+        string => string_replace(
+          "$(default:modules_presence.moduledir)", "\\", "/"
+        );
+
+      "_modules_source"
+        string => string_replace("$(sys.inputdir)/modules", "\\", "/");
+
+      # findfiles() returns directories as well as plain files. We build an
+      # intermediary array keyed by path, populated only for entries that are
+      # not directories, then take its values as the list of plain files.
+      "_present_foundfiles" slist => findfiles("$(_moduledir)/**");
+
+      "_present_file[$(_present_foundfiles)]"
+        string => "$(_present_foundfiles)",
+        if => not(isdir("$(_present_foundfiles)"));
+
+      "_modules_present" slist => getvalues("_present_file");
+
+      # Vendored package modules, rendered to moduledir/packages/<name>.
+      "_expected_package_modules"
+        slist => maplist(
+          "$(_moduledir)/packages/$(this)",
+          @(default:modules_presence._vendored_modules)
+        );
+
+      # Everything else the recursive copy in modules_presence delivers: plain
+      # modules and package-module overrides, taken from the source tree
+      # (excluding the vendored and mustache templates, which render to
+      # different names) and mapped into moduledir.
+      "_source_foundfiles" slist => findfiles("$(_modules_source)/**");
+
+      "_expected_source_foundfiles"
+        slist => filter(
+          ".*/modules/(packages/vendored|mustache)/.*",
+          _source_foundfiles,
+          "true", # match arg2 as a regular expression
+          "true", # invert: keep the files that do NOT match
+          999999
+        );
+
+      "_expected_source_file[$(_expected_source_foundfiles)]"
+        string => string_replace(
+          "$(_expected_source_foundfiles)",
+          "$(_modules_source)",
+          "$(_moduledir)"
+        ),
+        if => not(isdir("$(_expected_source_foundfiles)"));
+
+      "_expected_source_modules" slist => getvalues("_expected_source_file");
+
+      # Custom mustache modules, rendered to moduledir/<name>. modules_presence
+      # only defines the list on non-Windows when a mustache directory exists,
+      # so default to empty and override it when the list is present.
+      "_expected_custom_template_modules"
+        slist => {},
+        unless => isvariable(
+          "default:modules_presence._custom_template_modules"
+        );
+
+      "_expected_custom_template_modules"
+        slist => maplist(
+          "$(_moduledir)/$(this)",
+          @(default:modules_presence._custom_template_modules)
+        ),
+        if => isvariable("default:modules_presence._custom_template_modules");
+
+      # Unmanaged = present minus everything the policy is expected to deliver.
+      # Tagged as inventory so it is visible in Mission Portal and host reports.
+      "_all_expected_modules"
+        slist => {
+          @(_expected_source_modules),
+          @(_expected_package_modules),
+          @(_expected_custom_template_modules),
+        };
+
+      "_unmanaged_modules"
+        slist => difference("_modules_present", "_all_expected_modules"),
+        meta => { "inventory", "attribute_name=Unmanaged modules" };
+
+  classes:
+    any::
+      # Safety guards for the destructive delete below. We only ever purge when
+      # both hold, so a partially-evaluated policy can never cause the whole
+      # modules directory to be treated as unmanaged and wiped:
+      #  - modules_presence actually ran (its lists are what we compare against);
+      #  - the modules source directory exists (matching the fileexists guard on
+      #    the recursive copy in modules_presence).
+      "_modules_cleanup_safe"
+        expression => and(
+          isvariable("default:modules_presence._vendored_modules"),
+          isdir("$(_modules_source)")
+        );
+
+  files:
+    cfengine_internal_purge_unmanaged_modules._modules_cleanup_safe::
+      "$(_unmanaged_modules)" -> { "ENT-10483" }
+        delete => u_tidy,
+        comment => "Cull files in the modules directory not delivered by the policy.";
+
+  reports:
+    DEBUG|DEBUG_modules_cleanup::
+      "_moduledir: $(_moduledir)";
+      "_modules_source: $(_modules_source)";
+      "_modules_present: $(with)" with => storejson(@(_modules_present));
+
+      "_all_expected_modules: $(with)"
+        with => storejson(@(_all_expected_modules));
+
+      "_unmanaged_modules: $(with)" with => storejson(@(_unmanaged_modules));
+}
+
+body edit_defaults u_no_backup
+# @brief Do not keep a `.cf-before-edit` backup when rendering a template
+{
+  edit_backup => "false";
 }
 
 body file_select not_vendored_modules(pathname)

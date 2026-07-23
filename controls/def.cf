@@ -882,6 +882,14 @@ bundle common def
     # NOTE THAT THIS CLASS ALSO NEEDS TO BE SET IN update.cf
     "cfengine_internal_purge_policies_disabled" expression => "!any";
 
+    # ENT-10483: Inventory unmanaged files in the modules directory.
+    # NOTE THAT THIS CLASS ALSO NEEDS TO BE SET IN update.cf
+    "cfengine_internal_report_unmanaged_modules" expression => "!any";
+
+    # ENT-10483: Inventory and delete them (implies the above). Use with care.
+    # NOTE THAT THIS CLASS ALSO NEEDS TO BE SET IN update.cf
+    "cfengine_internal_purge_unmanaged_modules" expression => "!any";
+
     # Preserve permissions of the policy server's masterfiles.
     # you can also request it from the command line with
     # -Dcfengine_internal_preserve_permissions
